@@ -68,6 +68,7 @@
         <td>{{ location['contact_info'] or 'Не указано' }}</td>
         <td>{{ location['availability'] or 'Не указано' }}</td>
         <td>{{ location['website'] or 'Не указано' }}</td>
+<td><a href="{{ url_for('edit_location', id=location['id']) }}">Редактировать</a></td> <!-- Ссылка -->
     </tr>
     {% endfor %}
 </table>

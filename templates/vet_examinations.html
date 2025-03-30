@@ -69,6 +69,7 @@
         <td>{{ exam['diagnosis'] }}</td>
         <td>{{ exam['treatment'] }}</td>
         <td>{{ exam['next_examination_date'] or 'Не указано' }}</td>
+<td><a href="{{ url_for('edit_vet_examination', id=exam['id']) }}">Редактировать</a></td> <!-- Ссылка -->
     </tr>
     {% endfor %}
 </table>

@@ -102,6 +102,7 @@
         <td>{{ breed['common_behavioral_issues'] or 'Не указано' }}</td>
         <td>{{ breed['preferred_training_methods'] or 'Не указано' }}</td>
         <td>{{ breed['typical_learning_period'] or 'Не указано' }}</td>
+	<td><a href="{{ url_for('edit_breed', id=breed['id']) }}">Редактировать</a></td>
     </tr>
     {% endfor %}
 </table>

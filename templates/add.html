@@ -12,8 +12,7 @@
         <a href="/">Главная</a> |
         <a href="/search">Поиск</a> |
         <a href="/view">Просмотр</a> |
-        <a href="/add">Добавить (просто)</a> |
-        <a href="/add_detailed">Добавить (подробно)</a> |
+        <a href="/add">Добавить</a> |
         <a href="/breeds">Породы</a> |
         <a href="/locations">Места размещения</a> |
         <a href="/vet_examinations">Ветеринарные осмотры</a> |
@@ -83,11 +82,11 @@
     </select><br>
     <label for="getting_id">Источник получения:</label><br>
     <select name="getting_id" id="getting_id">
-        <option value="">-- Выберите источник --</option>
-        {% for getting in gettings %}
-            <option value="{{ getting['id'] }}">{{ getting['getting_name'] }}</option>
-        {% endfor %}
-    </select><br>
+    <option value="">-- Выберите источник --</option>
+    {% for getting in gettings %}
+        <option value="{{ getting['id'] }}">{{ getting['getting_by'] }}</option>
+    {% endfor %}
+</select>
     <label for="vet_examinations_id">Ветеринарный осмотр:</label><br>
     <select name="vet_examinations_id" id="vet_examinations_id">
         <option value="">-- Выберите осмотр --</option>
@@ -131,6 +130,7 @@
             <td>{{ dog['size_name'] or 'Не указано' }}</td>
             <td>{{ dog['getting_by'] or 'Не указано' }}</td>
             <td>{{ dog['examination_date'] or 'Не указано' }}</td>
+	    <td><a href="{{ url_for('edit', id=dog['id']) }}">Редактировать</a></td> <!-- Ссылка -->
         </tr>
         {% endfor %}
     </table>

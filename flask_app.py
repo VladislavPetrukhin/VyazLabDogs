@@ -143,6 +143,34 @@ def search():
                            breed_name=breed_name, location_name=location_name, 
                            no_results=no_results, breeds=breeds, locations=locations)
 
+
+@app.route('/edit_vet_examination/<int:id>', methods=['GET', 'POST'])
+def edit_vet_examination(id):
+    errors = []
+    with get_db_connection() as conn:
+        dogs = conn.execute("SELECT id, name FROM dogs ORDER BY name").fetchall()
+
+    if request.method == 'POST':
+        data = {
+            'dog_id': request.form['dog_id'],
+            'examination_date': request.form['examination_date'],
+            'diagnosis': request.form['diagnosis'],
+            'treatment': request.form['treatment']
+        }
+        errors = validate_data(data, VALIDATION_RULES['vet_examinations'])
+        if not errors:
+            with get_db_connection() as conn:
+                conn.execute("""
+                    UPDATE vet_examinations 
+                    SET dog_id = ?, examination_date = ?, diagnosis = ?, treatment = ?
+                    WHERE id = ?
+                """, (data['dog_id'], data['examination_date'], data['diagnosis'], data['treatment'], id))
+                conn.commit()
+            return redirect(url_for('vet_examinations'))
+
+    with get_db_connection() as conn:
+        exam = conn.execute("SELECT * FROM vet_examinations WHERE id = ?", (id,)).fetchone()
+    return render_template('edit_vet_examination.html', exam=exam, dogs=dogs, errors=errors)
 # Добавление собаки
 @app.route('/add', methods=['GET', 'POST'])
 def add():
@@ -156,7 +184,10 @@ def add():
         color_variations = conn.execute("SELECT id, color_variations_name FROM color_variations ORDER BY color_variations_name").fetchall()
         temperaments = conn.execute("SELECT id, temperament_name FROM temperament ORDER BY temperament_name").fetchall()
         sizes = conn.execute("SELECT id, size_name FROM size ORDER BY size_name").fetchall()
-        gettings = conn.execute("SELECT id, getting_by FROM getting WHERE getting_by IS NOT NULL AND getting_by != '' ORDER BY getting_by").fetchall()
+        gettings = conn.execute(
+            "SELECT id, getting_by FROM getting WHERE getting_by IS NOT NULL AND TRIM(getting_by) != '' ORDER BY getting_by").fetchall()
+        for getting in gettings:
+            print(f"ID: {getting['id']}, Getting_by: '{getting['getting_by']}'")
         vet_examinations = conn.execute("SELECT id, examination_date FROM vet_examinations ORDER BY examination_date").fetchall()
 
     if request.method == 'POST':

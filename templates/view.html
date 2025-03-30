@@ -48,6 +48,7 @@
                 <td>{{ dog['color_variations_name'] or 'Не указано' }}</td>
                 <td>{{ dog['temperament_name'] or 'Не указано' }}</td>
                 <td>{{ dog['size_name'] or 'Не указано' }}</td>
+		<td><a href="{{ url_for('edit', id=dog['id']) }}">Редактировать</a></td>
             </tr>
             {% endfor %}
         </table>
