@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -64,7 +65,6 @@ def validate_data(data, rules):
                     errors.append(f"{field}: должно быть числом")
             if 'format' in field_rules and field_rules['format'] == 'YYYY-MM-DD':
                 try:
-                    from datetime import datetime
                     datetime.strptime(value, '%Y-%m-%d')
                 except ValueError:
                     errors.append(f"{field}: неверный формат даты, ожидается YYYY-MM-DD")
@@ -390,69 +390,48 @@ def stats():
 
 # Запросы
 @app.route('/queries', methods=['GET', 'POST'])
-def queries():
+def queries():# В маршруте /queries
     attributes = {
-    # Поля из таблицы dogs (Собаки)
     'name': {'table': 'd', 'column': 'name', 'type': 'text', 'label': 'Имя собаки'},
-    'birth_date': {'table': 'd', 'column': 'birth_date', 'type': 'text', 'label': 'Дата рождения'},
+    'birth_date': {'table': 'd', 'column': 'birth_date', 'type': 'text', 'label': 'Дата рождения', 'is_date': True},
     'breeds_id': {'table': 'd', 'column': 'breeds_id', 'type': 'number', 'label': 'ID породы'},
     'getting_id': {'table': 'd', 'column': 'getting_id', 'type': 'number', 'label': 'ID получения собаки'},
     'vet_examinations_id': {'table': 'd', 'column': 'vet_examinations_id', 'type': 'number', 'label': 'ID ветеринарного осмотра'},
     'location_id': {'table': 'd', 'column': 'location_id', 'type': 'number', 'label': 'ID места размещения'},
-    'registration_date': {'table': 'd', 'column': 'registration_date', 'type': 'text', 'label': 'Дата регистрации'},
+    'registration_date': {'table': 'd', 'column': 'registration_date', 'type': 'text', 'label': 'Дата регистрации', 'is_date': True},
     'microchip_number': {'table': 'd', 'column': 'microchip_number', 'type': 'text', 'label': 'Номер микрочипа'},
-    'coat_type': {'table': 'ct', 'column': 'coat_type_name', 'type': 'text', 'label': 'Тип шерсти'},
-    'color_variations': {'table': 'cv', 'column': 'color_variations_name', 'type': 'text', 'label': 'Окрас'},
-    'temperament': {'table': 't', 'column': 'temperament_name', 'type': 'text', 'label': 'Темперамент'},
-    'size': {'table': 's', 'column': 'size_name', 'type': 'text', 'label': 'Размер'},
-
-    # Поля из таблицы coat_type (Тип шерсти)
-    'coat_type_name': {'table': 'ct', 'column': 'coat_type_name', 'type': 'text', 'label': 'Название типа шерсти'},
-
-    # Поля из таблицы color_variations (Окрас)
-    'color_variations_name': {'table': 'cv', 'column': 'color_variations_name', 'type': 'text', 'label': 'Название окраса'},
-
-    # Поля из таблицы temperament (Темперамент)
-    'temperament_name': {'table': 't', 'column': 'temperament_name', 'type': 'text', 'label': 'Название темперамента'},
-
-    # Поля из таблицы size (Размер)
-    'size_name': {'table': 's', 'column': 'size_name', 'type': 'text', 'label': 'Название размера'},
-
-    # Поля из таблицы breeds (Породы)
-    'breed_name': {'table': 'b', 'column': 'breed_name', 'type': 'text', 'label': 'Название породы'},
-    'breed_group': {'table': 'b', 'column': 'breed_group', 'type': 'text', 'label': 'Группа породы'},
-    'origin_country': {'table': 'b', 'column': 'origin_country', 'type': 'text', 'label': 'Страна происхождения'},
+    'coat_type': {'table': 'ct', 'column': 'coat_type_name', 'type': 'text', 'label': 'Тип шерсти', 'has_options': 'coat_type_name'},
+    'color_variations': {'table': 'cv', 'column': 'color_variations_name', 'type': 'text', 'label': 'Окрас', 'has_options': 'color_variations_name'},
+    'temperament': {'table': 't', 'column': 'temperament_name', 'type': 'text', 'label': 'Темперамент', 'has_options': 'temperament_name'},
+    'size': {'table': 's', 'column': 'size_name', 'type': 'text', 'label': 'Размер', 'has_options': 'size_name'},
+    'breed_name': {'table': 'b', 'column': 'breed_name', 'type': 'text', 'label': 'Название породы', 'has_options': 'breed_name'},
+    'breed_group': {'table': 'b', 'column': 'breed_group', 'type': 'text', 'label': 'Группа породы', 'has_options': 'breed_group'},
+    'origin_country': {'table': 'b', 'column': 'origin_country', 'type': 'text', 'label': 'Страна происхождения', 'has_options': 'origin_country'},
     'average_lifes': {'table': 'b', 'column': 'average_lifes', 'type': 'number', 'label': 'Средняя продолжительность жизни'},
-    'typical_use': {'table': 'b', 'column': 'typical_use', 'type': 'text', 'label': 'Типичное использование'},
+    'typical_use': {'table': 'b', 'column': 'typical_use', 'type': 'text', 'label': 'Типичное использование', 'has_options': 'typical_use'},
     'common_health_issues': {'table': 'b', 'column': 'common_health_issues', 'type': 'text', 'label': 'Распространенные проблемы со здоровьем'},
     'recommended_vaccinations': {'table': 'b', 'column': 'recommended_vaccinations', 'type': 'text', 'label': 'Рекомендуемые вакцинации'},
     'veterinary_care': {'table': 'b', 'column': 'veterinary_care', 'type': 'text', 'label': 'Потребности в ветеринарном уходе'},
     'average_weight_male': {'table': 'b', 'column': 'average_weight_male', 'type': 'number', 'label': 'Средний вес самцов'},
     'average_weight_female': {'table': 'b', 'column': 'average_weight_female', 'type': 'number', 'label': 'Средний вес самок'},
-    'trainability_level': {'table': 'b', 'column': 'trainability_level', 'type': 'text', 'label': 'Уровень обучаемости'},
+    'trainability_level': {'table': 'b', 'column': 'trainability_level', 'type': 'text', 'label': 'Уровень обучаемости', 'has_options': 'trainability_level'},
     'recommended_training_age': {'table': 'b', 'column': 'recommended_training_age', 'type': 'number', 'label': 'Рекомендуемый возраст начала дрессировки'},
     'common_behavioral_issues': {'table': 'b', 'column': 'common_behavioral_issues', 'type': 'text', 'label': 'Распространенные поведенческие проблемы'},
     'preferred_training_methods': {'table': 'b', 'column': 'preferred_training_methods', 'type': 'text', 'label': 'Предпочтительные методы дрессировки'},
     'typical_learning_period': {'table': 'b', 'column': 'typical_learning_period', 'type': 'number', 'label': 'Типичный период обучения'},
-
-    # Поля из таблицы getting (Получение собаки)
-    'getting_by': {'table': 'g', 'column': 'getting_by', 'type': 'text', 'label': 'Кем передана'},
+    'getting_by': {'table': 'g', 'column': 'getting_by', 'type': 'text', 'label': 'Кем передана', 'has_options': 'getting_by'},
     'contact_info': {'table': 'g', 'column': 'contact_info', 'type': 'text', 'label': 'Контактная информация'},
-    'getting_type': {'table': 'g', 'column': 'getting_type', 'type': 'text', 'label': 'Тип передачи'},
+    'getting_type': {'table': 'g', 'column': 'getting_type', 'type': 'text', 'label': 'Тип передачи', 'has_options': 'getting_type'},
     'reason': {'table': 'g', 'column': 'reason', 'type': 'text', 'label': 'Причина передачи'},
-
-    # Поля из таблицы vet_examinations (Ветеринарные осмотры)
-    'examination_date': {'table': 've', 'column': 'examination_date', 'type': 'text', 'label': 'Дата осмотра'},
+    'examination_date': {'table': 've', 'column': 'examination_date', 'type': 'text', 'label': 'Дата осмотра', 'is_date': True},
     'veterinarian_name': {'table': 've', 'column': 'veterinarian_name', 'type': 'text', 'label': 'Имя ветеринара'},
     'diagnosis': {'table': 've', 'column': 'diagnosis', 'type': 'text', 'label': 'Диагноз'},
     'treatment': {'table': 've', 'column': 'treatment', 'type': 'text', 'label': 'Лечение'},
-    'next_examination_date': {'table': 've', 'column': 'next_examination_date', 'type': 'text', 'label': 'Дата следующего осмотра'},
-
-    # Поля из таблицы locations (Места размещения)
-    'location_name': {'table': 'l', 'column': 'location_name', 'type': 'text', 'label': 'Название места'},
-    'location_type': {'table': 'l', 'column': 'location_type', 'type': 'text', 'label': 'Тип места'},
+    'next_examination_date': {'table': 've', 'column': 'next_examination_date', 'type': 'text', 'label': 'Дата следующего осмотра', 'is_date': True},
+    'location_name': {'table': 'l', 'column': 'location_name', 'type': 'text', 'label': 'Название места', 'has_options': 'location_name'},
+    'location_type': {'table': 'l', 'column': 'location_type', 'type': 'text', 'label': 'Тип места', 'has_options': 'location_type'},
     'address': {'table': 'l', 'column': 'address', 'type': 'text', 'label': 'Адрес'},
-    'contact_info': {'table': 'l', 'column': 'contact_info', 'type': 'text', 'label': 'Контактная информация'},
+    'contact_info_loc': {'table': 'l', 'column': 'contact_info', 'type': 'text', 'label': 'Контактная информация (место)'},
     'price': {'table': 'l', 'column': 'price', 'type': 'number', 'label': 'Стоимость'},
     'availability': {'table': 'l', 'column': 'availability', 'type': 'number', 'label': 'Количество собак'},
     'website': {'table': 'l', 'column': 'website', 'type': 'text', 'label': 'Сайт'}
@@ -468,17 +447,43 @@ def queries():
     search_max2 = None
     errors = []
 
+    # Получаем варианты для полей с has_options
+    options = {}
     with get_db_connection() as conn:
         breeds = [row['breed_name'] for row in conn.execute("SELECT DISTINCT breed_name FROM breeds ORDER BY breed_name").fetchall()]
         locations = [row['location_name'] for row in conn.execute("SELECT DISTINCT location_name FROM locations ORDER BY location_name").fetchall()]
+        
+        # Для таблицы breeds
+        options['breed_name'] = [(row['breed_name'], row['breed_name']) for row in conn.execute("SELECT DISTINCT breed_name FROM breeds ORDER BY breed_name").fetchall()]
+        options['breed_group'] = [(row['breed_group'], row['breed_group']) for row in conn.execute("SELECT DISTINCT breed_group FROM breeds WHERE breed_group IS NOT NULL ORDER BY breed_group").fetchall()]
+        options['origin_country'] = [(row['origin_country'], row['origin_country']) for row in conn.execute("SELECT DISTINCT origin_country FROM breeds WHERE origin_country IS NOT NULL ORDER BY origin_country").fetchall()]
+        options['typical_use'] = [(row['typical_use'], row['typical_use']) for row in conn.execute("SELECT DISTINCT typical_use FROM breeds WHERE typical_use IS NOT NULL ORDER BY typical_use").fetchall()]
+        options['trainability_level'] = [(row['trainability_level'], row['trainability_level']) for row in conn.execute("SELECT DISTINCT trainability_level FROM breeds WHERE trainability_level IS NOT NULL ORDER BY trainability_level").fetchall()]
+        
+        # Для таблицы locations
+        options['location_name'] = [(row['location_name'], row['location_name']) for row in conn.execute("SELECT DISTINCT location_name FROM locations ORDER BY location_name").fetchall()]
+        options['location_type'] = [(row['location_type'], row['location_type']) for row in conn.execute("SELECT DISTINCT location_type FROM locations WHERE location_type IS NOT NULL ORDER BY location_type").fetchall()]
+        
+        # Для остальных таблиц
+        options['coat_type_name'] = [(row['coat_type_name'], row['coat_type_name']) for row in conn.execute("SELECT DISTINCT coat_type_name FROM coat_type ORDER BY coat_type_name").fetchall()]
+        options['color_variations_name'] = [(row['color_variations_name'], row['color_variations_name']) for row in conn.execute("SELECT DISTINCT color_variations_name FROM color_variations ORDER BY color_variations_name").fetchall()]
+        options['temperament_name'] = [(row['temperament_name'], row['temperament_name']) for row in conn.execute("SELECT DISTINCT temperament_name FROM temperament ORDER BY temperament_name").fetchall()]
+        options['size_name'] = [(row['size_name'], row['size_name']) for row in conn.execute("SELECT DISTINCT size_name FROM size ORDER BY size_name").fetchall()]
+        options['getting_by'] = [(row['getting_by'], row['getting_by']) for row in conn.execute("SELECT DISTINCT getting_by FROM getting ORDER BY getting_by").fetchall()]
+        options['getting_type'] = [(row['getting_type'], row['getting_type']) for row in conn.execute("SELECT DISTINCT getting_type FROM getting WHERE getting_type IS NOT NULL ORDER BY getting_type").fetchall()]
+        
+        print("Options:", {k: len(v) for k, v in options.items()})
 
     if request.method == 'POST':
-        selected_attribute1 = request.form.get('attribute1')
-        search_min1 = request.form.get('search_min1')
+        selected_attribute1 = request.form.get('attribute1', '')
+        search_min1 = request.form.get('search_min1', '')
         search_max1 = request.form.get('search_max1') or search_min1
-        selected_attribute2 = request.form.get('attribute2')
-        search_min2 = request.form.get('search_min2')
+        selected_attribute2 = request.form.get('attribute2', '')
+        search_min2 = request.form.get('search_min2', '')
         search_max2 = request.form.get('search_max2') or search_min2
+
+        print(f"POST: selected_attribute1={selected_attribute1}, search_min1={search_min1}, search_max1={search_max1}")
+        print(f"POST: selected_attribute2={selected_attribute2}, search_min2={search_min2}, search_max2={search_max2}")
 
         if not selected_attribute1 or selected_attribute1 not in attributes:
             errors.append("Выберите корректный первый атрибут")
@@ -489,6 +494,7 @@ def queries():
             table1 = attr_info1['table']
             column1 = attr_info1['column']
             attr_type1 = attr_info1['type']
+            is_date1 = attr_info1.get('is_date', False)
 
             try:
                 if attr_type1 == 'number':
@@ -498,20 +504,40 @@ def queries():
                         if search_max1 < search_min1:
                             errors.append(f"Максимальное значение для '{attr_info1['label']}' должно быть больше минимального")
                             raise ValueError
+                elif is_date1:
+                    datetime.strptime(search_min1, '%Y-%m-%d')
+                    if search_max1:
+                        datetime.strptime(search_max1, '%Y-%m-%d')
+                        if search_max1 < search_min1:
+                            errors.append(f"Максимальная дата для '{attr_info1['label']}' должна быть позже минимальной")
+                            raise ValueError
                 else:
                     search_max1 = search_min1
 
                 with get_db_connection() as conn:
                     cursor = conn.cursor()
                     query = """
-                        SELECT d.id, d.name, b.breed_name, l.location_name, d.birth_date, d.registration_date, d.microchip_number
+                        SELECT 
+                            d.id, d.name, d.birth_date, d.registration_date, d.microchip_number,
+                            b.breed_name, b.breed_group, b.origin_country, b.average_lifes, b.typical_use, 
+                            b.common_health_issues, b.recommended_vaccinations, b.veterinary_care, 
+                            b.average_weight_male, b.average_weight_female, b.trainability_level, 
+                            b.recommended_training_age, b.common_behavioral_issues, b.preferred_training_methods, 
+                            b.typical_learning_period,
+                            l.location_name, l.location_type, l.address, l.contact_info AS location_contact_info, 
+                            l.price, l.availability, l.website,
+                            ct.coat_type_name, cv.color_variations_name, t.temperament_name, s.size_name,
+                            g.getting_by, g.contact_info AS getting_contact_info, g.getting_type, g.reason,
+                            ve.examination_date, ve.veterinarian_name, ve.diagnosis, ve.treatment, ve.next_examination_date
                         FROM dogs d
-                        JOIN breeds b ON d.breeds_id = b.id
-                        JOIN locations l ON d.location_id = l.id
-                        JOIN coat_type ct ON d.coat_type = ct.id
-                        JOIN color_variations cv ON d.color_variations = cv.id
-                        JOIN temperament t ON d.temperament = t.id
-                        JOIN size s ON d.size = s.id
+                        LEFT JOIN breeds b ON d.breeds_id = b.id
+                        LEFT JOIN locations l ON d.location_id = l.id
+                        LEFT JOIN coat_type ct ON d.coat_type = ct.id
+                        LEFT JOIN color_variations cv ON d.color_variations = cv.id
+                        LEFT JOIN temperament t ON d.temperament = t.id
+                        LEFT JOIN size s ON d.size = s.id
+                        LEFT JOIN getting g ON d.getting_id = g.id
+                        LEFT JOIN vet_examinations ve ON d.vet_examinations_id = ve.id
                         WHERE {table1}.{column1} >= ? AND {table1}.{column1} <= ?
                     """.format(table1=table1, column1=column1)
                     params = [search_min1, search_max1]
@@ -521,6 +547,7 @@ def queries():
                         table2 = attr_info2['table']
                         column2 = attr_info2['column']
                         attr_type2 = attr_info2['type']
+                        is_date2 = attr_info2.get('is_date', False)
 
                         if attr_type2 == 'number':
                             search_min2 = int(search_min2)
@@ -528,6 +555,13 @@ def queries():
                                 search_max2 = int(search_max2)
                                 if search_max2 < search_min2:
                                     errors.append(f"Максимальное значение для '{attr_info2['label']}' должно быть больше минимального")
+                                    raise ValueError
+                        elif is_date2:
+                            datetime.strptime(search_min2, '%Y-%m-%d')
+                            if search_max2:
+                                datetime.strptime(search_max2, '%Y-%m-%d')
+                                if search_max2 < search_min2:
+                                    errors.append(f"Максимальная дата для '{attr_info2['label']}' должна быть позже минимальной")
                                     raise ValueError
                         else:
                             search_max2 = search_min2
@@ -539,14 +573,15 @@ def queries():
 
             except ValueError:
                 if not errors:
-                    errors.append(f"Значение для '{attr_info1['label']}' должно быть {'числом' if attr_type1 == 'number' else 'текстом'}")
+                    errors.append(f"Значение для '{attr_info1['label']}' должно быть {'числом' if attr_type1 == 'number' else 'датой в формате YYYY-MM-DD' if is_date1 else 'текстом'}")
             except sqlite3.OperationalError as e:
                 errors.append(f"Ошибка базы данных: {str(e)}")
 
     return render_template('queries.html', attributes=attributes, results=results, 
                           selected_attribute1=selected_attribute1, search_min1=search_min1, search_max1=search_max1,
                           selected_attribute2=selected_attribute2, search_min2=search_min2, search_max2=search_max2,
-                          errors=errors, breeds=breeds, locations=locations, numeric_attributes=numeric_attributes)
+                          errors=errors, breeds=breeds, locations=locations, numeric_attributes=numeric_attributes,
+                          options=options)
 
 # Маршрут для редактирования локации
 @app.route('/edit_location/<int:id>', methods=['GET', 'POST'])

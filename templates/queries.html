@@ -5,14 +5,74 @@
     <title>Запросы</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+    <script>
+        // Функция для динамического обновления полей ввода
+        function updateInputFields(attributeId, inputContainerId, optionsData) {
+            const attribute = document.getElementById(attributeId).value;
+            const container = document.getElementById(inputContainerId);
+            container.innerHTML = ''; // Очищаем контейнер
+
+            if (!attribute || !optionsData[attribute]) return;
+
+            const attrInfo = optionsData[attribute];
+            let html = '';
+
+            if (attrInfo.is_date) {
+                html = `
+                    <label>Диапазон дат:</label><br>
+                    <input type="date" name="${inputContainerId === 'input1' ? 'search_min1' : 'search_min2'}" value=""><br>
+                    <input type="date" name="${inputContainerId === 'input1' ? 'search_max1' : 'search_max2'}" value=""><br>
+                `;
+            } else if (attrInfo.type === 'number') {
+                html = `
+                    <label>Диапазон чисел:</label><br>
+                    <input type="number" name="${inputContainerId === 'input1' ? 'search_min1' : 'search_min2'}" placeholder="Мин. значение" value=""><br>
+                    <input type="number" name="${inputContainerId === 'input1' ? 'search_max1' : 'search_max2'}" placeholder="Макс. значение" value=""><br>
+                `;
+            } else if (attrInfo.has_options) {
+                const options = optionsData[attribute].options || [];
+                html = `
+                    <label>Значение:</label><br>
+                    <select name="${inputContainerId === 'input1' ? 'search_min1' : 'search_min2'}">
+                        <option value="">-- Выберите значение --</option>
+                `;
+                options.forEach(([value, label]) => {
+                    html += `<option value="${value}">${label}</option>`;
+                });
+                html += `</select><br>`;
+            } else {
+                html = `
+                    <label>Значение:</label><br>
+                    <input type="text" name="${inputContainerId === 'input1' ? 'search_min1' : 'search_min2'}" placeholder="Введите значение" value=""><br>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        // Передаем данные атрибутов и опций из Python в JavaScript
+        window.onload = function() {
+            const attributesData = {{ attributes | tojson }};
+            const optionsData = {};
+            {% for key, attr in attributes.items() %}
+                optionsData['{{ key }}'] = {
+                    type: '{{ attr.type }}',
+                    is_date: {{ 'true' if attr.is_date else 'false' }},
+                    has_options: {{ 'true' if attr.has_options else 'false' }},
+                    options: {{ options[attr.has_options] | tojson if attr.has_options else '[]' }}
+                };
+            {% endfor %}
+            document.getElementById('attribute1').addEventListener('change', () => updateInputFields('attribute1', 'input1', optionsData));
+            document.getElementById('attribute2').addEventListener('change', () => updateInputFields('attribute2', 'input2', optionsData));
+        };
+    </script>
 </head>
 <body>
     <h1>Запросы</h1>
     <nav>
         <a href="/">Главная</a> |
         <a href="/search">Поиск</a> |
-        <a href="/view">Собаки</a> |
-        <a href="/add">Добавить собаку</a> |
+        <a href="/view">Просмотр</a> |
+        <a href="/add">Добавить (просто)</a> |
         <a href="/breeds">Породы</a> |
         <a href="/locations">Места размещения</a> |
         <a href="/vet_examinations">Ветеринарные осмотры</a> |
@@ -28,105 +88,125 @@
         </ul>
     {% endif %}
 
-    <h2>Поиск по атрибутам</h2>
+    <h2>Создать запрос</h2>
     <form method="POST">
-        <label for="attribute1">Выберите первый атрибут:</label><br>
-        <select name="attribute1" id="attribute1" required>
+        <label for="attribute1">Атрибут 1:</label><br>
+        <select name="attribute1" id="attribute1">
             <option value="">-- Выберите атрибут --</option>
             {% for key, attr in attributes.items() %}
-                <option value="{{ key }}" {% if key == selected_attribute1 %}selected{% endif %}>{{ attr.label }}</option>
+                <option value="{{ key }}" {% if selected_attribute1 == key %}selected{% endif %}>{{ attr.label }}</option>
             {% endfor %}
         </select><br>
-        <div id="input_container1">
-            <input type="text" name="search_min1" id="search_min1" value="{{ search_min1 or '' }}" required>
+        <div id="input1">
+            <label>Значение:</label><br>
+            <input type="text" name="search_min1" placeholder="Введите значение" value="{{ search_min1 or '' }}"><br>
         </div>
 
-        <label for="attribute2">Выберите второй атрибут (опционально):</label><br>
+        <label for="attribute2">Атрибут 2:</label><br>
         <select name="attribute2" id="attribute2">
             <option value="">-- Выберите атрибут --</option>
             {% for key, attr in attributes.items() %}
-                <option value="{{ key }}" {% if key == selected_attribute2 %}selected{% endif %}>{{ attr.label }}</option>
+                <option value="{{ key }}" {% if selected_attribute2 == key %}selected{% endif %}>{{ attr.label }}</option>
             {% endfor %}
         </select><br>
-        <div id="input_container2">
-            <input type="text" name="search_min2" id="search_min2" value="{{ search_min2 or '' }}">
+        <div id="input2">
+            <label>Значение:</label><br>
+            <input type="text" name="search_min2" placeholder="Введите значение" value="{{ search_min2 or '' }}"><br>
         </div>
 
-        <button type="submit">Найти</button>
+        <button type="submit">Выполнить запрос</button>
     </form>
 
     {% if results %}
-        <h2>Результаты поиска</h2>
+        <h2>Результаты</h2>
         <table>
             <tr>
                 <th>ID</th>
                 <th>Кличка</th>
-                <th>Порода</th>
-                <th>Место размещения</th>
                 <th>Дата рождения</th>
                 <th>Дата регистрации</th>
+                <th>Номер микрочипа</th>
+                <th>Порода</th>
+                <th>Группа породы</th>
+                <th>Страна происхождения</th>
+                <th>Средняя продолжительность жизни</th>
+                <th>Типичное использование</th>
+                <th>Распространенные проблемы со здоровьем</th>
+                <th>Рекомендуемые вакцинации</th>
+                <th>Потребности в ветеринарном уходе</th>
+                <th>Средний вес самцов</th>
+                <th>Средний вес самок</th>
+                <th>Уровень обучаемости</th>
+                <th>Рекомендуемый возраст начала дрессировки</th>
+                <th>Распространенные поведенческие проблемы</th>
+                <th>Предпочтительные методы дрессировки</th>
+                <th>Типичный период обучения</th>
+                <th>Место размещения</th>
+                <th>Тип места</th>
+                <th>Адрес</th>
+                <th>Контактная информация (место)</th>
+                <th>Стоимость</th>
+                <th>Количество собак</th>
+                <th>Сайт</th>
+                <th>Тип шерсти</th>
+                <th>Окрас</th>
+                <th>Темперамент</th>
+                <th>Размер</th>
+                <th>Кем передана</th>
+                <th>Контактная информация (передача)</th>
+                <th>Тип передачи</th>
+                <th>Причина передачи</th>
+                <th>Дата осмотра</th>
+                <th>Имя ветеринара</th>
+                <th>Диагноз</th>
+                <th>Лечение</th>
+                <th>Дата следующего осмотра</th>
             </tr>
-            {% for result in results %}
+            {% for dog in results %}
             <tr>
-                <td>{{ result['id'] }}</td>
-                <td>{{ result['name'] }}</td>
-                <td>{{ result['breed_name'] }}</td>
-                <td>{{ result['location_name'] or 'Не указано' }}</td>
-                <td>{{ result['birth_date'] or 'Не указано' }}</td>
-                <td>{{ result['registration_date'] or 'Не указано' }}</td>
+                <td>{{ dog['id'] }}</td>
+                <td>{{ dog['name'] }}</td>
+                <td>{{ dog['birth_date'] }}</td>
+                <td>{{ dog['registration_date'] }}</td>
+                <td>{{ dog['microchip_number'] }}</td>
+                <td>{{ dog['breed_name'] }}</td>
+                <td>{{ dog['breed_group'] }}</td>
+                <td>{{ dog['origin_country'] }}</td>
+                <td>{{ dog['average_lifes'] }}</td>
+                <td>{{ dog['typical_use'] }}</td>
+                <td>{{ dog['common_health_issues'] }}</td>
+                <td>{{ dog['recommended_vaccinations'] }}</td>
+                <td>{{ dog['veterinary_care'] }}</td>
+                <td>{{ dog['average_weight_male'] }}</td>
+                <td>{{ dog['average_weight_female'] }}</td>
+                <td>{{ dog['trainability_level'] }}</td>
+                <td>{{ dog['recommended_training_age'] }}</td>
+                <td>{{ dog['common_behavioral_issues'] }}</td>
+                <td>{{ dog['preferred_training_methods'] }}</td>
+                <td>{{ dog['typical_learning_period'] }}</td>
+                <td>{{ dog['location_name'] }}</td>
+                <td>{{ dog['location_type'] }}</td>
+                <td>{{ dog['address'] }}</td>
+                <td>{{ dog['location_contact_info'] }}</td>
+                <td>{{ dog['price'] }}</td>
+                <td>{{ dog['availability'] }}</td>
+                <td>{{ dog['website'] }}</td>
+                <td>{{ dog['coat_type_name'] }}</td>
+                <td>{{ dog['color_variations_name'] }}</td>
+                <td>{{ dog['temperament_name'] }}</td>
+                <td>{{ dog['size_name'] }}</td>
+                <td>{{ dog['getting_by'] }}</td>
+                <td>{{ dog['getting_contact_info'] }}</td>
+                <td>{{ dog['getting_type'] }}</td>
+                <td>{{ dog['reason'] }}</td>
+                <td>{{ dog['examination_date'] }}</td>
+                <td>{{ dog['veterinarian_name'] }}</td>
+                <td>{{ dog['diagnosis'] }}</td>
+                <td>{{ dog['treatment'] }}</td>
+                <td>{{ dog['next_examination_date'] }}</td>
             </tr>
             {% endfor %}
         </table>
     {% endif %}
-
-    <script>
-        const attributeSelect1 = document.getElementById('attribute1');
-        const inputContainer1 = document.getElementById('input_container1');
-        const attributeSelect2 = document.getElementById('attribute2');
-        const inputContainer2 = document.getElementById('input_container2');
-
-        const breeds = {{ breeds|tojson|safe }};
-        const locations = {{ locations|tojson|safe }};
-        const numericAttributes = {{ numeric_attributes|tojson|safe }};
-
-        function updateInputContainer(selectElement, containerElement, isFirst) {
-            const selectedValue = selectElement.value;
-            containerElement.innerHTML = '';
-
-            if (!selectedValue) {
-                containerElement.innerHTML = `<input type="text" name="${isFirst ? 'search_min1' : 'search_min2'}" id="${isFirst ? 'search_min1' : 'search_min2'}" value="${isFirst ? '{{ search_min1 or '' }}' : '{{ search_min2 or '' }}'}" ${isFirst ? 'required' : ''}>`;
-            } else if (selectedValue === 'breed_name') {
-                containerElement.innerHTML = `<select name="${isFirst ? 'search_min1' : 'search_min2'}" id="${isFirst ? 'search_min1' : 'search_min2'}" ${isFirst ? 'required' : ''}>` +
-                    '<option value="">-- Выберите породу --</option>' +
-                    breeds.map(breed => `<option value="${breed}" ${breed === (isFirst ? '{{ search_min1 }}' : '{{ search_min2 }}') ? 'selected' : ''}>${breed}</option>`).join('') +
-                    '</select>';
-            } else if (selectedValue === 'location_name') {
-                containerElement.innerHTML = `<select name="${isFirst ? 'search_min1' : 'search_min2'}" id="${isFirst ? 'search_min1' : 'search_min2'}" ${isFirst ? 'required' : ''}>` +
-                    '<option value="">-- Выберите место --</option>' +
-                    locations.map(location => `<option value="${location}" ${location === (isFirst ? '{{ search_min1 }}' : '{{ search_min2 }}') ? 'selected' : ''}>${location}</option>`).join('') +
-                    '</select>';
-            } else if (numericAttributes.includes(selectedValue)) {
-                containerElement.innerHTML = `<label for="${isFirst ? 'search_min1' : 'search_min2'}">Минимальное значение:</label><br>` +
-                    `<input type="text" name="${isFirst ? 'search_min1' : 'search_min2'}" id="${isFirst ? 'search_min1' : 'search_min2'}" value="${isFirst ? '{{ search_min1 or '' }}' : '{{ search_min2 or '' }}'}" ${isFirst ? 'required' : ''}><br>` +
-                    `<label for="${isFirst ? 'search_max1' : 'search_max2'}">Максимальное значение (опционально):</label><br>` +
-                    `<input type="text" name="${isFirst ? 'search_max1' : 'search_max2'}" id="${isFirst ? 'search_max1' : 'search_max2'}" value="${isFirst ? '{{ search_max1 or '' }}' : '{{ search_max2 or '' }}'}">`;
-            } else {
-                containerElement.innerHTML = `<input type="text" name="${isFirst ? 'search_min1' : 'search_min2'}" id="${isFirst ? 'search_min1' : 'search_min2'}" value="${isFirst ? '{{ search_min1 or '' }}' : '{{ search_min2 or '' }}'}" ${isFirst ? 'required' : ''}>`;
-            }
-        }
-
-        attributeSelect1.addEventListener('change', function() {
-            updateInputContainer(this, inputContainer1, true);
-        });
-
-        attributeSelect2.addEventListener('change', function() {
-            updateInputContainer(this, inputContainer2, false);
-        });
-
-        window.addEventListener('load', function() {
-            updateInputContainer(attributeSelect1, inputContainer1, true);
-            updateInputContainer(attributeSelect2, inputContainer2, false);
-        });
-    </script>
 </body>
 </html>
