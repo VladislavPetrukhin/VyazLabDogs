@@ -156,7 +156,7 @@ def add():
         color_variations = conn.execute("SELECT id, color_variations_name FROM color_variations ORDER BY color_variations_name").fetchall()
         temperaments = conn.execute("SELECT id, temperament_name FROM temperament ORDER BY temperament_name").fetchall()
         sizes = conn.execute("SELECT id, size_name FROM size ORDER BY size_name").fetchall()
-        gettings = conn.execute("SELECT id, getting_by FROM getting ORDER BY getting_by").fetchall()
+        gettings = conn.execute("SELECT id, getting_by FROM getting WHERE getting_by IS NOT NULL AND getting_by != '' ORDER BY getting_by").fetchall()
         vet_examinations = conn.execute("SELECT id, examination_date FROM vet_examinations ORDER BY examination_date").fetchall()
 
     if request.method == 'POST':
