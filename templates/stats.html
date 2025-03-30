@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Статистика</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+</head>
+<body>
+    <h1>Статистика</h1>
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/view">Собаки</a> |
+        <a href="/add">Добавить собаку</a> |
+        <a href="/add_detailed">Добавить (подробно)</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/queries">Запросы</a>
+    </nav>
+
+    <h2>Количество собак по породам</h2>
+    <table>
+        <tr><th>Порода</th><th>Количество собак</th></tr>
+        {% for item in by_breed %}
+        <tr><td>{{ item['breed_name'] }}</td><td>{{ item['dog_count'] }}</td></tr>
+        {% endfor %}
+    </table>
+
+    <h2>Количество собак по местам размещения</h2>
+    <table>
+        <tr><th>Место размещения</th><th>Количество собак</th></tr>
+        {% for item in by_location %}
+        <tr><td>{{ item['location_name'] }}</td><td>{{ item['dog_count'] }}</td></tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

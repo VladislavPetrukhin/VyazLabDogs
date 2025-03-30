@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Породы собак</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+</head>
+<body>
+    <h1>Породы собак</h1>
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/view">Собаки</a> |
+        <a href="/add">Добавить собаку</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/queries">Запросы</a>
+    </nav>
+
+    {% if errors %}
+        <ul class="errors">
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+<h2>Добавить породу</h2>
+<form method="POST">
+    <label for="breed_name">Название породы (3-100 символов):</label><br>
+    <input type="text" name="breed_name" id="breed_name" required><br>
+    <label for="breed_group">Группа породы (3-50 символов):</label><br>
+    <input type="text" name="breed_group" id="breed_group"><br>
+    <label for="origin_country">Страна происхождения (3-50 символов):</label><br>
+    <input type="text" name="origin_country" id="origin_country"><br>
+    <label for="average_lifes">Средняя продолжительность жизни (5-20 лет):</label><br>
+    <input type="number" name="average_lifes" id="average_lifes" min="5" max="20"><br>
+    <label for="typical_use">Типичное использование (3-100 символов):</label><br>
+    <input type="text" name="typical_use" id="typical_use"><br>
+    <label for="common_health_issues">Распространенные проблемы со здоровьем (3-200 символов):</label><br>
+    <input type="text" name="common_health_issues" id="common_health_issues"><br>
+    <label for="recommended_vaccinations">Рекомендуемые вакцинации (3-200 символов):</label><br>
+    <input type="text" name="recommended_vaccinations" id="recommended_vaccinations"><br>
+    <label for="veterinary_care">Потребности в ветеринарном уходе (Низкие/Средние/Высокие):</label><br>
+    <input type="text" name="veterinary_care" id="veterinary_care"><br>
+    <label for="average_weight_male">Средний вес самцов (кг, 1-100):</label><br>
+    <input type="number" name="average_weight_male" id="average_weight_male" min="1" max="100"><br>
+    <label for="average_weight_female">Средний вес самок (кг, 1-100):</label><br>
+    <input type="number" name="average_weight_female" id="average_weight_female" min="1" max="100"><br>
+    <label for="trainability_level">Уровень обучаемости (Низкий/Средний/Высокий):</label><br>
+    <input type="text" name="trainability_level" id="trainability_level"><br>
+    <label for="recommended_training_age">Рекомендуемый возраст начала дрессировки (1-12 месяцев):</label><br>
+    <input type="number" name="recommended_training_age" id="recommended_training_age" min="1" max="12"><br>
+    <label for="common_behavioral_issues">Распространенные поведенческие проблемы (3-200 символов):</label><br>
+    <input type="text" name="common_behavioral_issues" id="common_behavioral_issues"><br>
+    <label for="preferred_training_methods">Предпочтительные методы дрессировки (3-200 символов):</label><br>
+    <input type="text" name="preferred_training_methods" id="preferred_training_methods"><br>
+    <label for="typical_learning_period">Типичный период обучения (1-24 месяцев):</label><br>
+    <input type="number" name="typical_learning_period" id="typical_learning_period" min="1" max="24"><br>
+    <button type="submit">Добавить</button>
+</form>
+
+    <h2>Список пород</h2>
+    {% if breeds %}
+        <table>
+    <tr>
+        <th>ID</th>
+        <th>Название породы</th>
+        <th>Группа породы</th>
+        <th>Страна происхождения</th>
+        <th>Средняя продолжительность жизни</th>
+        <th>Типичное использование</th>
+        <th>Распространенные проблемы со здоровьем</th>
+        <th>Рекомендуемые вакцинации</th>
+        <th>Потребности в ветеринарном уходе</th>
+        <th>Средний вес самцов (кг)</th>
+        <th>Средний вес самок (кг)</th>
+        <th>Уровень обучаемости</th>
+        <th>Рекомендуемый возраст начала дрессировки (мес)</th>
+        <th>Распространенные поведенческие проблемы</th>
+        <th>Предпочтительные методы дрессировки</th>
+        <th>Типичный период обучения (мес)</th>
+    </tr>
+    {% for breed in breeds %}
+    <tr>
+        <td>{{ breed['id'] }}</td>
+        <td>{{ breed['breed_name'] }}</td>
+        <td>{{ breed['breed_group'] or 'Не указано' }}</td>
+        <td>{{ breed['origin_country'] or 'Не указано' }}</td>
+        <td>{{ breed['average_lifes'] or 'Не указано' }}</td>
+        <td>{{ breed['typical_use'] or 'Не указано' }}</td>
+        <td>{{ breed['common_health_issues'] or 'Не указано' }}</td>
+        <td>{{ breed['recommended_vaccinations'] or 'Не указано' }}</td>
+        <td>{{ breed['veterinary_care'] or 'Не указано' }}</td>
+        <td>{{ breed['average_weight_male'] or 'Не указано' }}</td>
+        <td>{{ breed['average_weight_female'] or 'Не указано' }}</td>
+        <td>{{ breed['trainability_level'] or 'Не указано' }}</td>
+        <td>{{ breed['recommended_training_age'] or 'Не указано' }}</td>
+        <td>{{ breed['common_behavioral_issues'] or 'Не указано' }}</td>
+        <td>{{ breed['preferred_training_methods'] or 'Не указано' }}</td>
+        <td>{{ breed['typical_learning_period'] or 'Не указано' }}</td>
+    </tr>
+    {% endfor %}
+</table>
+    {% else %}
+        <p>Нет пород для отображения.</p>
+    {% endif %}
+</body>
+</html>

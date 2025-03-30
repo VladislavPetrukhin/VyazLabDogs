@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Добавить собаку (просто)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+</head>
+<body>
+    <h1>Добавить собаку (просто)</h1>
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/view">Просмотр</a> |
+        <a href="/add">Добавить (просто)</a> |
+        <a href="/add_detailed">Добавить (подробно)</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/queries">Запросы</a>
+    </nav>
+
+    {% if errors %}
+        <ul class="errors">
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <h2>Добавление собаки</h2>
+<form method="POST">
+    <label for="name">Кличка (2-100 символов):</label><br>
+    <input type="text" name="name" id="name" required><br>
+    <label for="breed_id">Порода:</label><br>
+    <select name="breed_id" id="breed_id" required>
+        <option value="">-- Выберите породу --</option>
+        {% for breed in breeds %}
+            <option value="{{ breed['id'] }}">{{ breed['breed_name'] }}</option>
+        {% endfor %}
+    </select><br>
+    <label for="location_id">Место размещения:</label><br>
+    <select name="location_id" id="location_id">
+        <option value="">-- Выберите место --</option>
+        {% for location in locations %}
+            <option value="{{ location['id'] }}">{{ location['location_name'] }}</option>
+        {% endfor %}
+    </select><br>
+    <label for="birth_date">Дата рождения (ГГГГ-ММ-ДД):</label><br>
+    <input type="date" name="birth_date" id="birth_date"><br>
+    <label for="registration_date">Дата регистрации (ГГГГ-ММ-ДД):</label><br>
+    <input type="date" name="registration_date" id="registration_date"><br>
+    <label for="microchip_number">Номер микрочипа (10-20 символов):</label><br>
+    <input type="text" name="microchip_number" id="microchip_number"><br>
+    <label for="coat_type">Тип шерсти:</label><br>
+    <select name="coat_type" id="coat_type">
+        <option value="">-- Выберите тип шерсти --</option>
+        {% for coat in coat_types %}
+            <option value="{{ coat['id'] }}">{{ coat['coat_type_name'] }}</option>
+        {% endfor %}
+    </select><br>
+    <label for="color_variations">Окрас:</label><br>
+    <select name="color_variations" id="color_variations">
+        <option value="">-- Выберите окрас --</option>
+        {% for color in color_variations %}
+            <option value="{{ color['id'] }}">{{ color['color_variations_name'] }}</option>
+        {% endfor %}
+    </select><br>
+    <label for="temperament">Темперамент:</label><br>
+    <select name="temperament" id="temperament">
+        <option value="">-- Выберите темперамент --</option>
+        {% for temp in temperaments %}
+            <option value="{{ temp['id'] }}">{{ temp['temperament_name'] }}</option>
+        {% endfor %}
+    </select><br>
+    <label for="size">Размер:</label><br>
+    <select name="size" id="size">
+        <option value="">-- Выберите размер --</option>
+        {% for sz in sizes %}
+            <option value="{{ sz['id'] }}">{{ sz['size_name'] }}</option>
+        {% endfor %}
+    </select><br>
+    <label for="getting_id">Источник получения:</label><br>
+    <select name="getting_id" id="getting_id">
+        <option value="">-- Выберите источник --</option>
+        {% for getting in gettings %}
+            <option value="{{ getting['id'] }}">{{ getting['getting_name'] }}</option>
+        {% endfor %}
+    </select><br>
+    <label for="vet_examinations_id">Ветеринарный осмотр:</label><br>
+    <select name="vet_examinations_id" id="vet_examinations_id">
+        <option value="">-- Выберите осмотр --</option>
+        {% for exam in vet_examinations %}
+            <option value="{{ exam['id'] }}">{{ exam['examination_date'] }} - {{ exam['dog_name'] }}</option>
+        {% endfor %}
+    </select><br>
+    <button type="submit">Добавить</button>
+</form>
+
+    <h2>Список собак</h2>
+{% if dogs %}
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Кличка</th>
+            <th>Порода</th>
+            <th>Место размещения</th>
+            <th>Дата рождения</th>
+            <th>Дата регистрации</th>
+            <th>Номер микрочипа</th>
+            <th>Тип шерсти</th>
+            <th>Окрас</th>
+            <th>Темперамент</th>
+            <th>Размер</th>
+            <th>Источник получения</th>
+            <th>Ветеринарный осмотр</th>
+        </tr>
+        {% for dog in dogs %}
+        <tr>
+            <td>{{ dog['id'] }}</td>
+            <td>{{ dog['name'] }}</td>
+            <td>{{ dog['breed_name'] or 'Не указано' }}</td>
+            <td>{{ dog['location_name'] or 'Не указано' }}</td>
+            <td>{{ dog['birth_date'] or 'Не указано' }}</td>
+            <td>{{ dog['registration_date'] or 'Не указано' }}</td>
+            <td>{{ dog['microchip_number'] or 'Не указано' }}</td>
+            <td>{{ dog['coat_type_name'] or 'Не указано' }}</td>
+            <td>{{ dog['color_variations_name'] or 'Не указано' }}</td>
+            <td>{{ dog['temperament_name'] or 'Не указано' }}</td>
+            <td>{{ dog['size_name'] or 'Не указано' }}</td>
+            <td>{{ dog['getting_by'] or 'Не указано' }}</td>
+            <td>{{ dog['examination_date'] or 'Не указано' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    <p>Нет собак для отображения.</p>
+{% endif %}
+    {% else %}
+        <p>Нет собак для отображения.</p>
+    {% endif %}
+</body>
+</html>

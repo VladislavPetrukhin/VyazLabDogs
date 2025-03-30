@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Редактировать собаку</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+</head>
+<body>
+    <h1>Редактировать собаку</h1>
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/view">Просмотр</a> |
+        <a href="/add">Добавить собаку</a> |
+        <a href="/add_detailed">Добавить (подробно)</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/queries">Запросы</a>
+    </nav>
+    {% if errors %}
+        <ul class="errors">
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    <form method="POST">
+        <label>Кличка:</label><br>
+        <input type="text" name="name" value="{{ dog['name'] }}" required><br>
+        <label>Дата рождения (ГГГГ-ММ-ДД):</label><br>
+        <input type="date" name="birth_date" value="{{ dog['birth_date'] }}"><br>
+        <label>Порода:</label><br>
+        <select name="breeds_id" required>
+            {% for breed in breeds %}
+            <option value="{{ breed['id'] }}" {% if breed['id'] == dog['breeds_id'] %}selected{% endif %}>
+                {{ breed['breed_name'] }}
+            </option>
+            {% endfor %}
+        </select><br>
+        <label>Место размещения:</label><br>
+        <select name="location_id">
+            <option value="">Не указано</option>
+            {% for location in locations %}
+            <option value="{{ location['id'] }}" {% if location['id'] == dog['location_id'] %}selected{% endif %}>
+                {{ location['location_name'] }}
+            </option>
+            {% endfor %}
+        </select><br>
+        <label>Дата регистрации (ГГГГ-ММ-ДД):</label><br>
+        <input type="date" name="registration_date" value="{{ dog['registration_date'] }}"><br>
+        <button type="submit">Сохранить</button>
+    </form>
+</body>
+</html>

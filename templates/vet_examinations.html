@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Ветеринарные осмотры</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+</head>
+<body>
+    <h1>Ветеринарные осмотры</h1>
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/view">Собаки</a> |
+        <a href="/add">Добавить собаку</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/queries">Запросы</a>
+    </nav>
+
+    {% if errors %}
+        <ul class="errors">
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <h2>Добавить осмотр</h2>
+    <form method="POST">
+        <label for="dog_id">Собака:</label><br>
+        <select name="dog_id" id="dog_id" required>
+            <option value="">-- Выберите собаку --</option>
+            {% for dog in dogs %}
+                <option value="{{ dog['id'] }}">{{ dog['name'] }}</option>
+            {% endfor %}
+        </select><br>
+        <label for="examination_date">Дата осмотра (ГГГГ-ММ-ДД):</label><br>
+        <input type="date" name="examination_date" id="examination_date" required><br>
+        <label for="diagnosis">Диагноз (5-200 символов):</label><br>
+        <input type="text" name="diagnosis" id="diagnosis" required><br>
+        <label for="treatment">Лечение (5-200 символов):</label><br>
+        <input type="text" name="treatment" id="treatment" required><br>
+        <button type="submit">Добавить</button>
+    </form>
+
+    <h2>Список осмотров</h2>
+    {% if examinations %}
+        <table>
+    <tr>
+        <th>ID</th>
+        <th>ID собаки</th>
+        <th>Собака</th>
+        <th>Дата осмотра</th>
+        <th>Имя ветеринара</th>
+        <th>Диагноз</th>
+        <th>Лечение</th>
+        <th>Дата следующего осмотра</th>
+    </tr>
+    {% for exam in examinations %}
+    <tr>
+        <td>{{ exam['id'] }}</td>
+        <td>{{ exam['dog_id'] }}</td>
+        <td>{{ exam['dog_name'] }}</td>
+        <td>{{ exam['examination_date'] }}</td>
+        <td>{{ exam['veterinarian_name'] or 'Не указано' }}</td>
+        <td>{{ exam['diagnosis'] }}</td>
+        <td>{{ exam['treatment'] }}</td>
+        <td>{{ exam['next_examination_date'] or 'Не указано' }}</td>
+    </tr>
+    {% endfor %}
+</table>
+    {% else %}
+        <p>Нет осмотров для отображения.</p>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Редактировать ветеринарный осмотр</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+</head>
+<body>
+    <h1>Редактировать ветеринарный осмотр</h1>
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/dogs">Собаки</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/queries">Запросы</a>
+    </nav>
+
+    {% if errors %}
+        <ul class="errors">
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <h2>Редактирование осмотра (ID: {{ exam['id'] }})</h2>
+    <form method="POST">
+        <label for="dog_id">Собака:</label><br>
+        <select name="dog_id" id="dog_id" required>
+            {% for dog in dogs %}
+                <option value="{{ dog['id'] }}" {% if dog['id'] == exam['dog_id'] %}selected{% endif %}>{{ dog['dog_name'] }}</option>
+            {% endfor %}
+        </select><br>
+        <label for="exam_date">Дата осмотра:</label><br>
+        <input type="date" name="exam_date" id="exam_date" value="{{ exam['exam_date'] }}" required><br>
+        <label for="diagnosis">Диагноз (3-200 символов):</label><br>
+        <input type="text" name="diagnosis" id="diagnosis" value="{{ exam['diagnosis'] }}" required><br>
+        <button type="submit">Сохранить</button>
+    </form>
+</body>
+</html>

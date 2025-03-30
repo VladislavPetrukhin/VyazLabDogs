@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Поиск</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+</head>
+<body>
+    <h1>Поиск</h1>
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/view">Просмотр</a> |
+        <a href="/add">Добавить</a> |
+        <a href="/add_detailed">Добавить (подробно)</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/queries">Запросы</a>
+    </nav>
+
+    <h2>Поиск собак</h2>
+    <form method="POST">
+        <label for="name">Кличка:</label><br>
+        <input type="text" name="name" id="name" value="{{ name or '' }}"><br>
+        <label for="breed_name">Порода:</label><br>
+        <select name="breed_name" id="breed_name">
+            <option value="">-- Выберите породу --</option>
+            {% for breed in breeds %}
+                <option value="{{ breed }}" {% if breed == breed_name %}selected{% endif %}>{{ breed }}</option>
+            {% endfor %}
+        </select><br>
+        <label for="location_name">Место размещения:</label><br>
+        <select name="location_name" id="location_name">
+            <option value="">-- Выберите место --</option>
+            {% for location in locations %}
+                <option value="{{ location }}" {% if location == location_name %}selected{% endif %}>{{ location }}</option>
+            {% endfor %}
+        </select><br>
+        <button type="submit">Найти</button>
+    </form>
+
+    {% if results %}
+        <h2>Результаты поиска</h2>
+        <table>
+            <tr>
+                <th>ID</th><th>Кличка</th><th>Порода</th><th>Место размещения</th>
+            </tr>
+            {% for result in results %}
+            <tr>
+                <td>{{ result['id'] }}</td>
+                <td>{{ result['name'] }}</td>
+                <td>{{ result['breed_name'] }}</td>
+                <td>{{ result['location_name'] or 'Не указано' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+
+    {% if no_results %}
+        <p>Ничего не найдено по вашему запросу.</p>
+    {% endif %}
+</body>
+</html>

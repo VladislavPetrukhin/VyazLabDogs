@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Просмотр собак</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+</head>
+<body>
+    <h1>Список собак</h1>
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/view">Просмотр</a> |
+        <a href="/add">Добавить</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/queries">Запросы</a>
+    </nav>
+
+    {% if dogs %}
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Кличка</th>
+                <th>Порода</th>
+                <th>Место размещения</th>
+                <th>Дата рождения</th>
+                <th>Дата регистрации</th>
+                <th>Микрочип</th>
+                <th>Тип шерсти</th>
+                <th>Окрас</th>
+                <th>Темперамент</th>
+                <th>Размер</th>
+            </tr>
+            {% for dog in dogs %}
+            <tr>
+                <td>{{ dog['id'] }}</td>
+                <td>{{ dog['name'] }}</td>
+                <td>{{ dog['breed_name'] }}</td>
+                <td>{{ dog['location_name'] or 'Не указано' }}</td>
+                <td>{{ dog['birth_date'] or 'Не указано' }}</td>
+                <td>{{ dog['registration_date'] or 'Не указано' }}</td>
+                <td>{{ dog['microchip_number'] or 'Не указано' }}</td>
+                <td>{{ dog['coat_type_name'] or 'Не указано' }}</td>
+                <td>{{ dog['color_variations_name'] or 'Не указано' }}</td>
+                <td>{{ dog['temperament_name'] or 'Не указано' }}</td>
+                <td>{{ dog['size_name'] or 'Не указано' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Нет собак для отображения.</p>
+    {% endif %}
+</body>
+</html>

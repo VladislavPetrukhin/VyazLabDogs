@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Типы шерсти</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+</head>
+<body>
+    <h1>Типы шерсти</h1>
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/dogs">Собаки</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/queries">Запросы</a>
+    </nav>
+
+    {% if errors %}
+        <ul class="errors">
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <h2>Добавить тип шерсти</h2>
+    <form method="POST">
+        <label for="coat_name">Название типа шерсти (3-50 символов):</label><br>
+        <input type="text" name="coat_name" id="coat_name" required><br>
+        <button type="submit">Добавить</button>
+    </form>
+
+    <h2>Список типов шерсти</h2>
+    {% if coat_types %}
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Название типа</th>
+                <th>Действия</th>
+            </tr>
+            {% for coat in coat_types %}
+            <tr>
+                <td>{{ coat['id'] }}</td>
+                <td>{{ coat['coat_name'] }}</td>
+                <td><a href="{{ url_for('edit_coat_type', id=coat['id']) }}">Редактировать</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Нет типов шерсти для отображения.</p>
+    {% endif %}
+</body>
+</html>

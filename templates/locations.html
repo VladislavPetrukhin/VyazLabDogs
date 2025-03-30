@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Места размещения</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+</head>
+<body>
+    <h1>Места размещения</h1>
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/view">Собаки</a> |
+        <a href="/add">Добавить собаку</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/queries">Запросы</a>
+    </nav>
+
+    {% if errors %}
+        <ul class="errors">
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <h2>Добавить место размещения</h2>
+<form method="POST">
+    <label for="location_name">Название места (3-100 символов):</label><br>
+    <input type="text" name="location_name" id="location_name" required><br>
+    <label for="location_type">Тип места (Приют/Питомник/Частный заводчик):</label><br>
+    <input type="text" name="location_type" id="location_type"><br>
+    <label for="address">Адрес (5-200 символов):</label><br>
+    <input type="text" name="address" id="address" required><br>
+    <label for="contact_info">Контактная информация (5-100 символов):</label><br>
+    <input type="text" name="contact_info" id="contact_info"><br>
+    <label for="price">Стоимость (0-1000000 руб.):</label><br>
+    <input type="number" name="price" id="price" min="0" max="1000000"><br>
+    <label for="availability">Количество собак (1-1000):</label><br>
+    <input type="number" name="availability" id="availability" min="1" max="1000"><br>
+    <label for="website">Сайт (URL):</label><br>
+    <input type="text" name="website" id="website"><br>
+    <button type="submit">Добавить</button>
+</form>
+
+    <h2>Список мест размещения</h2>
+    {% if locations %}
+        <table>
+    <tr>
+        <th>ID</th>
+        <th>Название места</th>
+        <th>Тип места</th>
+        <th>Адрес</th>
+        <th>Контактная информация</th>
+        <th>Количество собак</th>
+        <th>Сайт</th>
+    </tr>
+    {% for location in locations %}
+    <tr>
+        <td>{{ location['id'] }}</td>
+        <td>{{ location['location_name'] }}</td>
+        <td>{{ location['location_type'] or 'Не указано' }}</td>
+        <td>{{ location['address'] or 'Не указано' }}</td>
+        <td>{{ location['contact_info'] or 'Не указано' }}</td>
+        <td>{{ location['availability'] or 'Не указано' }}</td>
+        <td>{{ location['website'] or 'Не указано' }}</td>
+    </tr>
+    {% endfor %}
+</table>
+    {% else %}
+        <p>Нет мест размещения для отображения.</p>
+    {% endif %}
+</body>
+</html>

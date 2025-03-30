@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Темпераменты</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+</head>
+<body>
+    <h1>Темпераменты</h1>
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/dogs">Собаки</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/queries">Запросы</a>
+    </nav>
+
+    {% if errors %}
+        <ul class="errors">
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <h2>Добавить темперамент</h2>
+    <form method="POST">
+        <label for="temperament_name">Название темперамента (3-50 символов):</label><br>
+        <input type="text" name="temperament_name" id="temperament_name" required><br>
+        <button type="submit">Добавить</button>
+    </form>
+
+    <h2>Список темпераментов</h2>
+    {% if temperaments %}
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Название темперамента</th>
+                <th>Действия</th>
+            </tr>
+            {% for temp in temperaments %}
+            <tr>
+                <td>{{ temp['id'] }}</td>
+                <td>{{ temp['temperament_name'] }}</td>
+                <td><a href="{{ url_for('edit_temperament', id=temp['id']) }}">Редактировать</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Нет темпераментов для отображения.</p>
+    {% endif %}
+</body>
+</html>
