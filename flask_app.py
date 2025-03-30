@@ -477,18 +477,18 @@ def queries():# В маршруте /queries
     if request.method == 'POST':
         selected_attribute1 = request.form.get('attribute1', '')
         search_min1 = request.form.get('search_min1', '')
-        search_max1 = request.form.get('search_max1') or search_min1
+        search_max1 = request.form.get('search_max1', '')  # Оставляем пустым, если не указано
         selected_attribute2 = request.form.get('attribute2', '')
         search_min2 = request.form.get('search_min2', '')
-        search_max2 = request.form.get('search_max2') or search_min2
+        search_max2 = request.form.get('search_max2', '')  # Оставляем пустым, если не указано
 
         print(f"POST: selected_attribute1={selected_attribute1}, search_min1={search_min1}, search_max1={search_max1}")
         print(f"POST: selected_attribute2={selected_attribute2}, search_min2={search_min2}, search_max2={search_max2}")
 
         if not selected_attribute1 or selected_attribute1 not in attributes:
             errors.append("Выберите корректный первый атрибут")
-        elif not search_min1:
-            errors.append("Введите минимальное значение для первого атрибута")
+        elif not search_min1 and not search_max1:
+            errors.append("Введите хотя бы одно значение для первого атрибута")
         else:
             attr_info1 = attributes[selected_attribute1]
             table1 = attr_info1['table']
@@ -497,22 +497,37 @@ def queries():# В маршруте /queries
             is_date1 = attr_info1.get('is_date', False)
 
             try:
+                # Устанавливаем границы по умолчанию
+                min_val1 = None
+                max_val1 = None
+
                 if attr_type1 == 'number':
-                    search_min1 = int(search_min1)
+                    if search_min1:
+                        min_val1 = int(search_min1)
                     if search_max1:
-                        search_max1 = int(search_max1)
-                        if search_max1 < search_min1:
-                            errors.append(f"Максимальное значение для '{attr_info1['label']}' должно быть больше минимального")
-                            raise ValueError
+                        max_val1 = int(search_max1)
+                    if min_val1 is not None and max_val1 is not None and max_val1 < min_val1:
+                        errors.append(
+                            f"Максимальное значение для '{attr_info1['label']}' должно быть больше минимального")
+                        raise ValueError
+                    # Если не указана одна из границ, используем широкий диапазон
+                    min_val1 = min_val1 if min_val1 is not None else -float('inf')
+                    max_val1 = max_val1 if max_val1 is not None else float('inf')
                 elif is_date1:
-                    datetime.strptime(search_min1, '%Y-%m-%d')
+                    if search_min1:
+                        min_val1 = datetime.strptime(search_min1, '%Y-%m-%d').date().isoformat()
                     if search_max1:
-                        datetime.strptime(search_max1, '%Y-%m-%d')
-                        if search_max1 < search_min1:
-                            errors.append(f"Максимальная дата для '{attr_info1['label']}' должна быть позже минимальной")
-                            raise ValueError
+                        max_val1 = datetime.strptime(search_max1, '%Y-%m-%d').date().isoformat()
+                    if min_val1 and max_val1 and max_val1 < min_val1:
+                        errors.append(f"Максимальная дата для '{attr_info1['label']}' должна быть позже минимальной")
+                        raise ValueError
+                    # Если не указана одна из границ, используем широкий диапазон дат
+                    min_val1 = min_val1 if min_val1 else '1970-01-01'
+                    max_val1 = max_val1 if max_val1 else '9999-12-31'
                 else:
-                    search_max1 = search_min1
+                    # Для текста используем точное совпадение, если указана только одна граница
+                    min_val1 = search_min1
+                    max_val1 = search_max1 if search_max1 else search_min1
 
                 with get_db_connection() as conn:
                     cursor = conn.cursor()
@@ -540,40 +555,54 @@ def queries():# В маршруте /queries
                         LEFT JOIN vet_examinations ve ON d.vet_examinations_id = ve.id
                         WHERE {table1}.{column1} >= ? AND {table1}.{column1} <= ?
                     """.format(table1=table1, column1=column1)
-                    params = [search_min1, search_max1]
+                    params = [min_val1, max_val1]
 
-                    if selected_attribute2 and search_min2:
+                    if selected_attribute2 and (search_min2 or search_max2):
                         attr_info2 = attributes[selected_attribute2]
                         table2 = attr_info2['table']
                         column2 = attr_info2['column']
                         attr_type2 = attr_info2['type']
                         is_date2 = attr_info2.get('is_date', False)
 
-                        if attr_type2 == 'number':
-                            search_min2 = int(search_min2)
-                            if search_max2:
-                                search_max2 = int(search_max2)
-                                if search_max2 < search_min2:
-                                    errors.append(f"Максимальное значение для '{attr_info2['label']}' должно быть больше минимального")
-                                    raise ValueError
-                        elif is_date2:
-                            datetime.strptime(search_min2, '%Y-%m-%d')
-                            if search_max2:
-                                datetime.strptime(search_max2, '%Y-%m-%d')
-                                if search_max2 < search_min2:
-                                    errors.append(f"Максимальная дата для '{attr_info2['label']}' должна быть позже минимальной")
-                                    raise ValueError
-                        else:
-                            search_max2 = search_min2
+                        min_val2 = None
+                        max_val2 = None
 
-                        query += " AND {table2}.{column2} >= ? AND {table2}.{column2} <= ?".format(table2=table2, column2=column2)
-                        params.extend([search_min2, search_max2])
+                        if attr_type2 == 'number':
+                            if search_min2:
+                                min_val2 = int(search_min2)
+                            if search_max2:
+                                max_val2 = int(search_max2)
+                            if min_val2 is not None and max_val2 is not None and max_val2 < min_val2:
+                                errors.append(
+                                    f"Максимальное значение для '{attr_info2['label']}' должно быть больше минимального")
+                                raise ValueError
+                            min_val2 = min_val2 if min_val2 is not None else -float('inf')
+                            max_val2 = max_val2 if max_val2 is not None else float('inf')
+                        elif is_date2:
+                            if search_min2:
+                                min_val2 = datetime.strptime(search_min2, '%Y-%m-%d').date().isoformat()
+                            if search_max2:
+                                max_val2 = datetime.strptime(search_max2, '%Y-%m-%d').date().isoformat()
+                            if min_val2 and max_val2 and max_val2 < min_val2:
+                                errors.append(
+                                    f"Максимальная дата для '{attr_info2['label']}' должна быть позже минимальной")
+                                raise ValueError
+                            min_val2 = min_val2 if min_val2 else '1970-01-01'
+                            max_val2 = max_val2 if max_val2 else '9999-12-31'
+                        else:
+                            min_val2 = search_min2
+                            max_val2 = search_max2 if search_max2 else search_min2
+
+                        query += " AND {table2}.{column2} >= ? AND {table2}.{column2} <= ?".format(table2=table2,
+                                                                                                   column2=column2)
+                        params.extend([min_val2, max_val2])
 
                     results = cursor.execute(query, tuple(params)).fetchall()
 
             except ValueError:
                 if not errors:
-                    errors.append(f"Значение для '{attr_info1['label']}' должно быть {'числом' if attr_type1 == 'number' else 'датой в формате YYYY-MM-DD' if is_date1 else 'текстом'}")
+                    errors.append(
+                        f"Значение для '{attr_info1['label']}' должно быть {'числом' if attr_type1 == 'number' else 'датой в формате YYYY-MM-DD' if is_date1 else 'текстом'}")
             except sqlite3.OperationalError as e:
                 errors.append(f"Ошибка базы данных: {str(e)}")
 

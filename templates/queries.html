@@ -7,7 +7,7 @@
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
     <script>
         // Функция для динамического обновления полей ввода
-        function updateInputFields(attributeId, inputContainerId, optionsData) {
+        function updateInputFields(attributeId, inputContainerId, optionsData, selectedMin, selectedMax) {
             const attribute = document.getElementById(attributeId).value;
             const container = document.getElementById(inputContainerId);
             container.innerHTML = ''; // Очищаем контейнер
@@ -20,14 +20,14 @@
             if (attrInfo.is_date) {
                 html = `
                     <label>Диапазон дат:</label><br>
-                    <input type="date" name="${inputContainerId === 'input1' ? 'search_min1' : 'search_min2'}" value=""><br>
-                    <input type="date" name="${inputContainerId === 'input1' ? 'search_max1' : 'search_max2'}" value=""><br>
+                    <input type="date" name="${inputContainerId === 'input1' ? 'search_min1' : 'search_min2'}" value="${selectedMin || ''}"><br>
+                    <input type="date" name="${inputContainerId === 'input1' ? 'search_max1' : 'search_max2'}" value="${selectedMax || ''}"><br>
                 `;
             } else if (attrInfo.type === 'number') {
                 html = `
                     <label>Диапазон чисел:</label><br>
-                    <input type="number" name="${inputContainerId === 'input1' ? 'search_min1' : 'search_min2'}" placeholder="Мин. значение" value=""><br>
-                    <input type="number" name="${inputContainerId === 'input1' ? 'search_max1' : 'search_max2'}" placeholder="Макс. значение" value=""><br>
+                    <input type="number" name="${inputContainerId === 'input1' ? 'search_min1' : 'search_min2'}" placeholder="Мин. значение" value="${selectedMin || ''}"><br>
+                    <input type="number" name="${inputContainerId === 'input1' ? 'search_max1' : 'search_max2'}" placeholder="Макс. значение" value="${selectedMax || ''}"><br>
                 `;
             } else if (attrInfo.has_options) {
                 const options = optionsData[attribute].options || [];
@@ -37,13 +37,13 @@
                         <option value="">-- Выберите значение --</option>
                 `;
                 options.forEach(([value, label]) => {
-                    html += `<option value="${value}">${label}</option>`;
+                    html += `<option value="${value}" ${value === selectedMin ? 'selected' : ''}>${label}</option>`;
                 });
                 html += `</select><br>`;
             } else {
                 html = `
                     <label>Значение:</label><br>
-                    <input type="text" name="${inputContainerId === 'input1' ? 'search_min1' : 'search_min2'}" placeholder="Введите значение" value=""><br>
+                    <input type="text" name="${inputContainerId === 'input1' ? 'search_min1' : 'search_min2'}" placeholder="Введите значение" value="${selectedMin || ''}"><br>
                 `;
             }
             container.innerHTML = html;
@@ -61,8 +61,14 @@
                     options: {{ options[attr.has_options] | tojson if attr.has_options else '[]' }}
                 };
             {% endfor %}
-            document.getElementById('attribute1').addEventListener('change', () => updateInputFields('attribute1', 'input1', optionsData));
-            document.getElementById('attribute2').addEventListener('change', () => updateInputFields('attribute2', 'input2', optionsData));
+            const attribute1 = document.getElementById('attribute1');
+            const attribute2 = document.getElementById('attribute2');
+            attribute1.addEventListener('change', () => updateInputFields('attribute1', 'input1', optionsData, '{{ search_min1 }}', '{{ search_max1 }}'));
+            attribute2.addEventListener('change', () => updateInputFields('attribute2', 'input2', optionsData, '{{ search_min2 }}', '{{ search_max2 }}'));
+
+            // Обновляем поля при загрузке страницы, если атрибуты уже выбраны
+            if (attribute1.value) updateInputFields('attribute1', 'input1', optionsData, '{{ search_min1 }}', '{{ search_max1 }}');
+            if (attribute2.value) updateInputFields('attribute2', 'input2', optionsData, '{{ search_min2 }}', '{{ search_max2 }}');
         };
     </script>
 </head>
