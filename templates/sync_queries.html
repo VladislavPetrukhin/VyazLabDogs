@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Запросы по синхронизированным атрибутам</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        function updateAttributes() {
+            var tableSelect = document.getElementById('table');
+            var attributeSelect = document.getElementById('attribute');
+            var selectedTable = tableSelect.value;
+            attributeSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+
+            if (selectedTable) {
+                fetch('/get_attributes?table=' + selectedTable)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(attr => {
+                            var option = document.createElement('option');
+                            option.value = attr.key;
+                            option.text = attr.label;
+                            attributeSelect.appendChild(option);
+                        });
+                    });
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Запросы по синхронизированным атрибутам</h1>
+
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/view">Собаки</a> |
+        <a href="/add">Добавить собаку</a> |
+        <a href="/add_detailed">Добавить собаку (подробно)</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/queries">Запросы</a> |
+        <a href="/sync_queries">Запросы синхр.</a>
+    </nav>
+
+    {% if errors %}
+        <ul class="errors">
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <form method="POST">
+        <label for="table">Атрибут 1:</label><br>
+        <select name="table" id="table" onchange="updateAttributes()" required>
+            <option value="">-- Выберите атрибут --</option>
+            {% for table_name, attrs in tables.items() %}
+                <option value="{{ table_name }}" {% if table_name == selected_table %}selected{% endif %}>
+                    {{ table_name }}
+                </option>
+            {% endfor %}
+        </select><br>
+
+        <label for="attribute">Атрибут 2:</label><br>
+        <select name="attribute" id="attribute" required>
+            <option value="">-- Выберите атрибут --</option>
+            {% if selected_table and attributes %}
+                {% for key, attr in attributes.items() %}
+                    <option value="{{ key }}" {% if key == selected_attribute %}selected{% endif %}>
+                        {{ attr.label }}
+                    </option>
+                {% endfor %}
+            {% endif %}
+        </select><br>
+
+        <label for="value">Значение:</label><br>
+        <input type="text" name="value" id="value" value="{{ value or '' }}"><br>
+
+        <button type="submit">Поиск</button>
+    </form>
+
+    {% if results %}
+        <h2>Результаты</h2>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Имя</th>
+                <th>Порода</th>
+                <th>Место размещения</th>
+                <th>Дата рождения</th>
+                <th>Дата регистрации</th>
+                <th>Номер микрочипа</th>
+            </tr>
+            {% for dog in results %}
+                <tr>
+                    <td>{{ dog.id }}</td>
+                    <td>{{ dog.name }}</td>
+                    <td>{{ dog.breed_name }}</td>
+                    <td>{{ dog.location_name }}</td>
+                    <td>{{ dog.birth_date }}</td>
+                    <td>{{ dog.registration_date }}</td>
+                    <td>{{ dog.microchip_number }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+</body>
+</html>

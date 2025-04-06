@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 import sqlite3
 import os
 from datetime import datetime
@@ -41,7 +41,62 @@ VALIDATION_RULES = {
         'reason': {'min_length': 5, 'max_length': 200}         # Причина: 5-200 символов
     }
 }
-
+TABLES = {
+    'Собака': {
+        'name': {'type': 'text', 'label': 'Имя собаки'},
+        'birth_date': {'type': 'date', 'label': 'Дата рождения'},
+        'breeds_id': {'type': 'number', 'label': 'Порода', 'has_options': 'breed_name'},
+        'getting_id': {'type': 'number', 'label': 'Получение', 'has_options': 'getting_by'},
+        'vet_examinations_id': {'type': 'number', 'label': 'Ветеринарный осмотр', 'has_options': 'examination_date'},
+        'location_id': {'type': 'number', 'label': 'Место размещения', 'has_options': 'location_name'},
+        'registration_date': {'type': 'date', 'label': 'Дата регистрации'},
+        'microchip_number': {'type': 'text', 'label': 'Номер микрочипа'},
+        'coat_type': {'type': 'number', 'label': 'Тип шерсти', 'has_options': 'coat_type_name'},
+        'color_variations': {'type': 'number', 'label': 'Окрас', 'has_options': 'color_variations_name'},
+        'temperament': {'type': 'number', 'label': 'Темперамент', 'has_options': 'temperament_name'},
+        'size': {'type': 'number', 'label': 'Размер', 'has_options': 'size_name'}
+    },
+    'Порода': {
+        'breed_name': {'type': 'text', 'label': 'Название породы'},
+        'breed_group': {'type': 'text', 'label': 'Группа породы'},
+        'origin_country': {'type': 'text', 'label': 'Страна происхождения'},
+        'average_lifes': {'type': 'number', 'label': 'Средняя продолжительность жизни'},
+        'typical_use': {'type': 'text', 'label': 'Типичное использование'},
+        'common_health_issues': {'type': 'text', 'label': 'Распространенные проблемы со здоровьем'},
+        'recommended_vaccinations': {'type': 'text', 'label': 'Рекомендуемые вакцинации'},
+        'veterinary_care': {'type': 'text', 'label': 'Потребности в ветеринарном уходе'},
+        'average_weight_male': {'type': 'number', 'label': 'Средний вес самцов'},
+        'average_weight_female': {'type': 'number', 'label': 'Средний вес самок'},
+        'trainability_level': {'type': 'text', 'label': 'Уровень обучаемости'},
+        'recommended_training_age': {'type': 'number', 'label': 'Рекомендуемый возраст начала дрессировки'},
+        'common_behavioral_issues': {'type': 'text', 'label': 'Распространенные поведенческие проблемы'},
+        'preferred_training_methods': {'type': 'text', 'label': 'Предпочтительные методы дрессировки'},
+        'typical_learning_period': {'type': 'number', 'label': 'Типичный период обучения'}
+    },
+    'Ветеринарный осмотр': {
+        'dog_id': {'type': 'number', 'label': 'ID собаки'},
+        'examination_date': {'type': 'date', 'label': 'Дата осмотра'},
+        'veterinarian_name': {'type': 'text', 'label': 'Имя ветеринара'},
+        'diagnosis': {'type': 'text', 'label': 'Диагноз'},
+        'treatment': {'type': 'text', 'label': 'Лечение'},
+        'next_examination_date': {'type': 'date', 'label': 'Дата следующего осмотра'}
+    },
+    'Размещение': {
+        'location_name': {'type': 'text', 'label': 'Название места'},
+        'location_type': {'type': 'text', 'label': 'Тип места'},
+        'address': {'type': 'text', 'label': 'Адрес'},
+        'contact_info': {'type': 'text', 'label': 'Контактная информация'},
+        'price': {'type': 'number', 'label': 'Стоимость'},
+        'availability': {'type': 'number', 'label': 'Количество собак'},
+        'website': {'type': 'text', 'label': 'Сайт'}
+    },
+    'Получение приютом': {
+        'getting_by': {'type': 'text', 'label': 'Кем передана'},
+        'contact_info': {'type': 'text', 'label': 'Контактная информация'},
+        'getting_type': {'type': 'text', 'label': 'Тип передачи'},
+        'reason': {'type': 'text', 'label': 'Причина передачи'}
+    }
+}
 # Функция для валидации данных
 def validate_data(data, rules):
     errors = []
@@ -74,6 +129,113 @@ def validate_data(data, rules):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/get_attributes')
+def get_attributes():
+    table = request.args.get('table', '')
+    if table in TABLES:
+        attributes = [{'key': key, 'label': attr['label']} for key, attr in TABLES[table].items()]
+        return jsonify(attributes)
+    return jsonify([])
+
+@app.route('/sync_queries', methods=['GET', 'POST'])
+def sync_queries():
+    errors = []
+    results = None
+    selected_table = None
+    selected_attribute = None
+    value = None
+    attributes = {}
+
+    if request.method == 'POST':
+        selected_table = request.form.get('table', '')
+        selected_attribute = request.form.get('attribute', '')
+        value = request.form.get('value', '').strip()
+
+        if not selected_table or selected_table not in TABLES:
+            errors.append("Выберите атрибут 1")
+        elif not selected_attribute or selected_attribute not in TABLES[selected_table]:
+            errors.append("Выберите атрибут 2")
+        elif not value:
+            errors.append("Введите значение для поиска")
+        else:
+            attr_info = TABLES[selected_table][selected_attribute]
+            attr_type = attr_info['type']
+            table_map = {
+                'Собака': 'd',
+                'Порода': 'b',
+                'Размещение': 'l',
+                'Ветеринарный осмотр': 've',
+                'Получение приютом': 'g'
+            }
+            table_alias = table_map[selected_table]
+
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                query = """
+                    SELECT d.id, d.name, b.breed_name, l.location_name, d.birth_date, d.registration_date, d.microchip_number
+                    FROM dogs d
+                    LEFT JOIN breeds b ON d.breeds_id = b.id
+                    LEFT JOIN locations l ON d.location_id = l.id
+                    LEFT JOIN vet_examinations ve ON d.vet_examinations_id = ve.id
+                    LEFT JOIN getting g ON d.getting_id = g.id
+                    WHERE {table}.{column} LIKE ?
+                """.format(table=table_alias, column=selected_attribute)
+                params = [f"%{value}%"] if attr_type == 'text' else [value]
+                results = cursor.execute(query, params).fetchall()
+
+        attributes = TABLES.get(selected_table, {})
+
+    return render_template('sync_queries.html', tables=TABLES, attributes=attributes, results=results,
+                          selected_table=selected_table, selected_attribute=selected_attribute, value=value,
+                          errors=errors)
+
+@app.route('/add_detailed', methods=['GET', 'POST'])
+def add_detailed():
+    errors = []
+    with get_db_connection() as conn:
+        breeds = conn.execute("SELECT id, breed_name FROM breeds ORDER BY breed_name").fetchall()
+        locations = conn.execute("SELECT id, location_name FROM locations ORDER BY location_name").fetchall()
+        coat_types = conn.execute("SELECT id, coat_type_name FROM coat_type ORDER BY coat_type_name").fetchall()
+        color_variations = conn.execute("SELECT id, color_variations_name FROM color_variations ORDER BY color_variations_name").fetchall()
+        temperaments = conn.execute("SELECT id, temperament_name FROM temperament ORDER BY temperament_name").fetchall()
+        sizes = conn.execute("SELECT id, size_name FROM size ORDER BY size_name").fetchall()
+        gettings = conn.execute("SELECT id, getting_by, getting_type FROM getting ORDER BY getting_by").fetchall()
+        vet_examinations = conn.execute("SELECT id, examination_date, diagnosis FROM vet_examinations ORDER BY examination_date").fetchall()
+
+    if request.method == 'POST':
+        data = {
+            'name': request.form['name'],
+            'birth_date': request.form['birth_date'] or None,
+            'registration_date': request.form['registration_date'] or None,
+            'microchip_number': request.form['microchip_number'] or None,
+            'breed_id': request.form['breed_id'],
+            'location_id': request.form['location_id'] or None,
+            'coat_type': request.form['coat_type'] or None,
+            'color_variations': request.form['color_variations'] or None,
+            'temperament': request.form['temperament'] or None,
+            'size': request.form['size'] or None,
+            'getting_id': request.form['getting_id'] or None,
+            'vet_examinations_id': request.form['vet_examinations_id'] or None
+        }
+
+        errors = validate_data(data, VALIDATION_RULES['dogs'])
+        if not errors:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO dogs (name, birth_date, registration_date, microchip_number, breeds_id, location_id, 
+                                      coat_type, color_variations, temperament, size, getting_id, vet_examinations_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (data['name'], data['birth_date'], data['registration_date'], data['microchip_number'],
+                      data['breed_id'], data['location_id'], data['coat_type'], data['color_variations'],
+                      data['temperament'], data['size'], data['getting_id'], data['vet_examinations_id']))
+                conn.commit()
+            return redirect(url_for('view'))
+
+    return render_template('add_detailed.html', errors=errors, breeds=breeds, locations=locations,
+                          coat_types=coat_types, color_variations=color_variations, temperaments=temperaments,
+                          sizes=sizes, gettings=gettings, vet_examinations=vet_examinations)
 
 # Просмотр собак
 @app.route('/view')
@@ -126,13 +288,13 @@ def search():
             params = []
 
             if name:
-                query += " AND d.name LIKE ?"
+                query += " AND LOWER(TRIM(d.name)) LIKE LOWER(?)"
                 params.append(f"%{name}%")
             if breed_name:
-                query += " AND b.breed_name = ?"
+                query += " AND LOWER(b.breed_name) = LOWER(?)"
                 params.append(breed_name)
             if location_name:
-                query += " AND l.location_name = ?"
+                query += " AND LOWER(l.location_name) = LOWER(?)"
                 params.append(location_name)
 
             results = cursor.execute(query, params).fetchall()
