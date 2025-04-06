@@ -21,6 +21,29 @@
                             option.text = attr.label;
                             attributeSelect.appendChild(option);
                         });
+                        updateValues(); // Обновляем значения после выбора таблицы
+                    });
+            }
+        }
+
+        function updateValues() {
+            var tableSelect = document.getElementById('table');
+            var attributeSelect = document.getElementById('attribute');
+            var valueSelect = document.getElementById('value');
+            var selectedTable = tableSelect.value;
+            var selectedAttribute = attributeSelect.value;
+
+            valueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
+            if (selectedTable && selectedAttribute) {
+                fetch('/get_attribute_values?table=' + selectedTable + '&attribute=' + selectedAttribute)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(value => {
+                            var option = document.createElement('option');
+                            option.value = value;
+                            option.text = value;
+                            valueSelect.appendChild(option);
+                        });
                     });
             }
         }
@@ -28,7 +51,6 @@
 </head>
 <body>
     <h1>Запросы по синхронизированным атрибутам</h1>
-
     <nav>
         <a href="/">Главная</a> |
         <a href="/search">Поиск</a> |
@@ -42,7 +64,6 @@
         <a href="/queries">Запросы</a> |
         <a href="/sync_queries">Запросы синхр.</a>
     </nav>
-
     {% if errors %}
         <ul class="errors">
             {% for error in errors %}
@@ -63,7 +84,7 @@
         </select><br>
 
         <label for="attribute">Атрибут 2:</label><br>
-        <select name="attribute" id="attribute" required>
+        <select name="attribute" id="attribute" onchange="updateValues()" required>
             <option value="">-- Выберите атрибут --</option>
             {% if selected_table and attributes %}
                 {% for key, attr in attributes.items() %}
@@ -75,7 +96,12 @@
         </select><br>
 
         <label for="value">Значение:</label><br>
-        <input type="text" name="value" id="value" value="{{ value or '' }}"><br>
+        <select name="value" id="value">
+            <option value="">-- Выберите значение --</option>
+            {% if selected_attribute and value %}
+                <option value="{{ value }}" selected>{{ value }}</option>
+            {% endif %}
+        </select><br>
 
         <button type="submit">Поиск</button>
     </form>

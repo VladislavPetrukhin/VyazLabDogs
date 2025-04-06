@@ -42,7 +42,7 @@ VALIDATION_RULES = {
     }
 }
 TABLES = {
-    'Собака': {
+    'dogs': {
         'name': {'type': 'text', 'label': 'Имя собаки'},
         'birth_date': {'type': 'date', 'label': 'Дата рождения'},
         'breeds_id': {'type': 'number', 'label': 'Порода', 'has_options': 'breed_name'},
@@ -56,7 +56,7 @@ TABLES = {
         'temperament': {'type': 'number', 'label': 'Темперамент', 'has_options': 'temperament_name'},
         'size': {'type': 'number', 'label': 'Размер', 'has_options': 'size_name'}
     },
-    'Порода': {
+    'breeds': {
         'breed_name': {'type': 'text', 'label': 'Название породы'},
         'breed_group': {'type': 'text', 'label': 'Группа породы'},
         'origin_country': {'type': 'text', 'label': 'Страна происхождения'},
@@ -73,7 +73,7 @@ TABLES = {
         'preferred_training_methods': {'type': 'text', 'label': 'Предпочтительные методы дрессировки'},
         'typical_learning_period': {'type': 'number', 'label': 'Типичный период обучения'}
     },
-    'Ветеринарный осмотр': {
+    'vet_examinations': {
         'dog_id': {'type': 'number', 'label': 'ID собаки'},
         'examination_date': {'type': 'date', 'label': 'Дата осмотра'},
         'veterinarian_name': {'type': 'text', 'label': 'Имя ветеринара'},
@@ -81,7 +81,7 @@ TABLES = {
         'treatment': {'type': 'text', 'label': 'Лечение'},
         'next_examination_date': {'type': 'date', 'label': 'Дата следующего осмотра'}
     },
-    'Размещение': {
+    'locations': {
         'location_name': {'type': 'text', 'label': 'Название места'},
         'location_type': {'type': 'text', 'label': 'Тип места'},
         'address': {'type': 'text', 'label': 'Адрес'},
@@ -90,7 +90,7 @@ TABLES = {
         'availability': {'type': 'number', 'label': 'Количество собак'},
         'website': {'type': 'text', 'label': 'Сайт'}
     },
-    'Получение приютом': {
+    'getting': {
         'getting_by': {'type': 'text', 'label': 'Кем передана'},
         'contact_info': {'type': 'text', 'label': 'Контактная информация'},
         'getting_type': {'type': 'text', 'label': 'Тип передачи'},
@@ -130,12 +130,56 @@ def validate_data(data, rules):
 def index():
     return render_template('index.html')
 
+# Маршрут для получения атрибутов таблицы
 @app.route('/get_attributes')
 def get_attributes():
     table = request.args.get('table', '')
     if table in TABLES:
         attributes = [{'key': key, 'label': attr['label']} for key, attr in TABLES[table].items()]
         return jsonify(attributes)
+    return jsonify([])
+
+# Новый маршрут для получения значений атрибута
+@app.route('/get_attribute_values')
+def get_attribute_values():
+    table = request.args.get('table', '')
+    attribute = request.args.get('attribute', '')
+    if table in TABLES and attribute in TABLES[table]:
+        attr_info = TABLES[table][attribute]
+        column = attribute
+        with get_db_connection() as conn:
+            # Обработка внешних ключей
+            if table == 'dogs' and attribute in ['breeds_id', 'location_id', 'vet_examinations_id', 'getting_id', 'coat_type', 'color_variations', 'temperament', 'size']:
+                if attribute == 'breeds_id':
+                    query = "SELECT DISTINCT b.breed_name FROM breeds b WHERE b.breed_name IS NOT NULL ORDER BY b.breed_name"
+                    column_name = 'breed_name'
+                elif attribute == 'location_id':
+                    query = "SELECT DISTINCT l.location_name FROM locations l WHERE l.location_name IS NOT NULL ORDER BY l.location_name"
+                    column_name = 'location_name'
+                elif attribute == 'vet_examinations_id':
+                    query = "SELECT DISTINCT ve.examination_date FROM vet_examinations ve WHERE ve.examination_date IS NOT NULL ORDER BY ve.examination_date"
+                    column_name = 'examination_date'
+                elif attribute == 'getting_id':
+                    query = "SELECT DISTINCT g.getting_by FROM getting g WHERE g.getting_by IS NOT NULL ORDER BY g.getting_by"
+                    column_name = 'getting_by'
+                elif attribute == 'coat_type':
+                    query = "SELECT DISTINCT ct.coat_type_name FROM coat_type ct WHERE ct.coat_type_name IS NOT NULL ORDER BY ct.coat_type_name"
+                    column_name = 'coat_type_name'
+                elif attribute == 'color_variations':
+                    query = "SELECT DISTINCT cv.color_variations_name FROM color_variations cv WHERE cv.color_variations_name IS NOT NULL ORDER BY cv.color_variations_name"
+                    column_name = 'color_variations_name'
+                elif attribute == 'temperament':
+                    query = "SELECT DISTINCT t.temperament_name FROM temperament t WHERE t.temperament_name IS NOT NULL ORDER BY t.temperament_name"
+                    column_name = 'temperament_name'
+                elif attribute == 'size':
+                    query = "SELECT DISTINCT s.size_name FROM size s WHERE s.size_name IS NOT NULL ORDER BY s.size_name"
+                    column_name = 'size_name'
+                values = [row[column_name] for row in conn.execute(query).fetchall()]
+            else:
+                query = f"SELECT DISTINCT {column} FROM {table} WHERE {column} IS NOT NULL ORDER BY {column}"
+                values = [row[column] for row in conn.execute(query).fetchall()]
+            print(f"Table: {table}, Attribute: {attribute}, Values: {values}")  # Отладка
+            return jsonify(values)
     return jsonify([])
 
 @app.route('/sync_queries', methods=['GET', 'POST'])
@@ -148,7 +192,7 @@ def sync_queries():
     attributes = {}
 
     if request.method == 'POST':
-        selected_table = request.form.get('table', '')
+        selected_table =  request.form.get('table', '')
         selected_attribute = request.form.get('attribute', '')
         value = request.form.get('value', '').strip()
 
@@ -162,11 +206,11 @@ def sync_queries():
             attr_info = TABLES[selected_table][selected_attribute]
             attr_type = attr_info['type']
             table_map = {
-                'Собака': 'd',
-                'Порода': 'b',
-                'Размещение': 'l',
-                'Ветеринарный осмотр': 've',
-                'Получение приютом': 'g'
+                'dogs': 'd',
+		'breeds': 'b',
+                'locations': 'l',
+                'vet_examinations': 've',
+                'getting': 'g'
             }
             table_alias = table_map[selected_table]
 
@@ -179,9 +223,9 @@ def sync_queries():
                     LEFT JOIN locations l ON d.location_id = l.id
                     LEFT JOIN vet_examinations ve ON d.vet_examinations_id = ve.id
                     LEFT JOIN getting g ON d.getting_id = g.id
-                    WHERE {table}.{column} LIKE ?
+                    WHERE {table}.{column} = ?
                 """.format(table=table_alias, column=selected_attribute)
-                params = [f"%{value}%"] if attr_type == 'text' else [value]
+                params = [value]
                 results = cursor.execute(query, params).fetchall()
 
         attributes = TABLES.get(selected_table, {})
@@ -189,6 +233,36 @@ def sync_queries():
     return render_template('sync_queries.html', tables=TABLES, attributes=attributes, results=results,
                           selected_table=selected_table, selected_attribute=selected_attribute, value=value,
                           errors=errors)
+
+@app.route('/add_breed', methods=['POST'])
+def add_breed():
+    data = request.get_json()
+    breed_name = data.get('breed_name', '').strip()
+    if not breed_name:
+        return jsonify({'success': False, 'error': 'Название породы не указано'})
+    if not (3 <= len(breed_name) <= 100):
+        return jsonify({'success': False, 'error': 'Название породы должно быть от 3 до 100 символов'})
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO breeds (breed_name) VALUES (?)", (breed_name,))
+        conn.commit()
+    return jsonify({'success': True})
+
+@app.route('/add_location', methods=['POST'])
+def add_location():
+    data = request.get_json()
+    location_name = data.get('location_name', '').strip()
+    if not location_name:
+        return jsonify({'success': False, 'error': 'Название места не указано'})
+    if not (3 <= len(location_name) <= 100):
+        return jsonify({'success': False, 'error': 'Название места должно быть от 3 до 100 символов'})
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO locations (location_name) VALUES (?)", (location_name,))
+        conn.commit()
+    return jsonify({'success': True})
 
 @app.route('/add_detailed', methods=['GET', 'POST'])
 def add_detailed():

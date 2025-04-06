@@ -2,14 +2,12 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Поиск</title>
+    <title>Поиск собак</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
 </head>
 <body>
-    <h1>Поиск</h1>
-
-    <nav>
+    <h1>Поиск собак</h1>
+     <nav>
         <a href="/">Главная</a> |
         <a href="/search">Поиск</a> |
         <a href="/view">Собаки</a> |
@@ -22,47 +20,116 @@
         <a href="/queries">Запросы</a> |
         <a href="/sync_queries">Запросы синхр.</a>
     </nav>
+    <form method="POST" id="searchForm">
+        <label for="name">Имя собаки:</label>
+        <input type="text" id="name" name="name" value="{{ name or '' }}">
+        <br>
 
-    <h2>Поиск собак</h2>
-    <form method="POST">
-        <label for="name">Кличка:</label><br>
-        <input type="text" name="name" id="name" value="{{ name or '' }}"><br>
-        <label for="breed_name">Порода:</label><br>
-        <select name="breed_name" id="breed_name">
+        <label for="breed_name">Порода:</label>
+        <select id="breed_name" name="breed_name">
             <option value="">-- Выберите породу --</option>
             {% for breed in breeds %}
                 <option value="{{ breed }}" {% if breed == breed_name %}selected{% endif %}>{{ breed }}</option>
             {% endfor %}
-        </select><br>
-        <label for="location_name">Место размещения:</label><br>
-        <select name="location_name" id="location_name">
+        </select>
+        <input type="text" id="new_breed" placeholder="Новая порода">
+        <button type="button" onclick="addBreed()">Добавить</button>
+        <br>
+
+        <label for="location_name">Место размещения:</label>
+        <select id="location_name" name="location_name">
             <option value="">-- Выберите место --</option>
             {% for location in locations %}
                 <option value="{{ location }}" {% if location == location_name %}selected{% endif %}>{{ location }}</option>
             {% endfor %}
-        </select><br>
-        <button type="submit">Найти</button>
+        </select>
+        <input type="text" id="new_location" placeholder="Новое место">
+        <button type="button" onclick="addLocation()">Добавить</button>
+        <br>
+
+        <button type="submit">Поиск</button>
     </form>
+
+    {% if no_results %}
+        <p>Ничего не найдено</p>
+    {% endif %}
 
     {% if results %}
         <h2>Результаты поиска</h2>
         <table>
             <tr>
-                <th>ID</th><th>Кличка</th><th>Порода</th><th>Место размещения</th>
+                <th>ID</th>
+                <th>Имя</th>
+                <th>Порода</th>
+                <th>Место размещения</th>
+                <th>Дата рождения</th>
+                <th>Дата регистрации</th>
+                <th>Номер микрочипа</th>
             </tr>
-            {% for result in results %}
-            <tr>
-                <td>{{ result['id'] }}</td>
-                <td>{{ result['name'] }}</td>
-                <td>{{ result['breed_name'] }}</td>
-                <td>{{ result['location_name'] or 'Не указано' }}</td>
-            </tr>
+            {% for dog in results %}
+                <tr>
+                    <td>{{ dog.id }}</td>
+                    <td>{{ dog.name }}</td>
+                    <td>{{ dog.breed_name }}</td>
+                    <td>{{ dog.location_name }}</td>
+                    <td>{{ dog.birth_date }}</td>
+                    <td>{{ dog.registration_date }}</td>
+                    <td>{{ dog.microchip_number }}</td>
+                </tr>
             {% endfor %}
         </table>
     {% endif %}
 
-    {% if no_results %}
-        <p>Ничего не найдено по вашему запросу.</p>
-    {% endif %}
+    <script>
+        function addBreed() {
+            var newBreed = document.getElementById('new_breed').value.trim();
+            if (newBreed) {
+                fetch('/add_breed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ breed_name: newBreed })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        var select = document.getElementById('breed_name');
+                        var option = document.createElement('option');
+                        option.value = newBreed;
+                        option.text = newBreed;
+                        select.appendChild(option);
+                        select.value = newBreed;
+                        document.getElementById('new_breed').value = '';
+                    } else {
+                        alert('Ошибка: ' + data.error);
+                    }
+                });
+            }
+        }
+
+        function addLocation() {
+            var newLocation = document.getElementById('new_location').value.trim();
+            if (newLocation) {
+                fetch('/add_location', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ location_name: newLocation })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        var select = document.getElementById('location_name');
+                        var option = document.createElement('option');
+                        option.value = newLocation;
+                        option.text = newLocation;
+                        select.appendChild(option);
+                        select.value = newLocation;
+                        document.getElementById('new_location').value = '';
+                    } else {
+                        alert('Ошибка: ' + data.error);
+                    }
+                });
+            }
+        }
+    </script>
 </body>
 </html>
