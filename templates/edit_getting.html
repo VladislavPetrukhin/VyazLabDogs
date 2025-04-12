@@ -9,7 +9,7 @@
 <body>
     <h1>Редактировать запись о получении</h1>
 
-    <nav>
+       <nav>
         <a href="/">Главная</a> |
         <a href="/search">Поиск</a> |
         <a href="/view">Собаки</a> |
@@ -18,10 +18,11 @@
         <a href="/breeds">Породы</a> |
         <a href="/locations">Места размещения</a> |
         <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/getting">Получение приютом</a> |
         <a href="/stats">Статистика</a> |
-        <a href="/queries">Запросы</a> |
         <a href="/sync_queries">Запросы синхр.</a>
     </nav>
+
     {% if errors %}
         <ul class="errors">
             {% for error in errors %}
@@ -32,16 +33,14 @@
 
     <h2>Редактирование записи (ID: {{ getting['id'] }})</h2>
     <form method="POST">
-        <label for="dog_id">Собака:</label><br>
-        <select name="dog_id" id="dog_id" required>
-            {% for dog in dogs %}
-                <option value="{{ dog['id'] }}" {% if dog['id'] == getting['dog_id'] %}selected{% endif %}>{{ dog['dog_name'] }}</option>
-            {% endfor %}
-        </select><br>
-        <label for="date_received">Дата получения:</label><br>
-        <input type="date" name="date_received" id="date_received" value="{{ getting['date_received'] }}" required><br>
-        <label for="source">Источник (3-100 символов):</label><br>
-        <input type="text" name="source" id="source" value="{{ getting['source'] }}" required><br>
+        <label for="getting_by">Кем передана (3-100 символов):</label><br>
+        <input type="text" name="getting_by" id="getting_by" value="{{ getting['getting_by'] }}" required><br>
+        <label for="contact_info">Контактная информация (5-100 символов):</label><br>
+        <input type="text" name="contact_info" id="contact_info" value="{{ getting['contact_info'] }}" required><br>
+        <label for="getting_type">Тип передачи (3-50 символов):</label><br>
+        <input type="text" name="getting_type" id="getting_type" value="{{ getting['getting_type'] }}" required><br>
+        <label for="reason">Причина передачи (5-200 символов):</label><br>
+        <textarea name="reason" id="reason" required>{{ getting['reason'] }}</textarea><br>
         <button type="submit">Сохранить</button>
     </form>
 </body>

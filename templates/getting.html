@@ -9,7 +9,7 @@
 <body>
     <h1>Получение собак</h1>
 
-    <nav>
+        <nav>
         <a href="/">Главная</a> |
         <a href="/search">Поиск</a> |
         <a href="/view">Собаки</a> |
@@ -18,8 +18,8 @@
         <a href="/breeds">Породы</a> |
         <a href="/locations">Места размещения</a> |
         <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/getting">Получение приютом</a> |
         <a href="/stats">Статистика</a> |
-        <a href="/queries">Запросы</a> |
         <a href="/sync_queries">Запросы синхр.</a>
     </nav>
 
@@ -33,17 +33,14 @@
 
     <h2>Добавить запись о получении</h2>
     <form method="POST">
-        <label for="dog_id">Собака:</label><br>
-        <select name="dog_id" id="dog_id" required>
-            <option value="">-- Выберите собаку --</option>
-            {% for dog in dogs %}
-                <option value="{{ dog['id'] }}">{{ dog['dog_name'] }}</option>
-            {% endfor %}
-        </select><br>
-        <label for="date_received">Дата получения:</label><br>
-        <input type="date" name="date_received" id="date_received" required><br>
-        <label for="source">Источник (3-100 символов):</label><br>
-        <input type="text" name="source" id="source" required><br>
+        <label for="getting_by">Кем передана (3-100 символов):</label><br>
+        <input type="text" name="getting_by" id="getting_by" required><br>
+        <label for="contact_info">Контактная информация (5-100 символов):</label><br>
+        <input type="text" name="contact_info" id="contact_info" required><br>
+        <label for="getting_type">Тип передачи (3-50 символов):</label><br>
+        <input type="text" name="getting_type" id="getting_type" required><br>
+        <label for="reason">Причина передачи (5-200 символов):</label><br>
+        <textarea name="reason" id="reason" required></textarea><br>
         <button type="submit">Добавить</button>
     </form>
 
@@ -52,17 +49,19 @@
         <table>
             <tr>
                 <th>ID</th>
-                <th>ID Собаки</th>
-                <th>Дата получения</th>
-                <th>Источник</th>
+                <th>Кем передана</th>
+                <th>Контактная информация</th>
+                <th>Тип передачи</th>
+                <th>Причина</th>
                 <th>Действия</th>
             </tr>
             {% for getting in gettings %}
             <tr>
                 <td>{{ getting['id'] }}</td>
-                <td>{{ getting['dog_id'] }}</td>
-                <td>{{ getting['date_received'] }}</td>
-                <td>{{ getting['source'] }}</td>
+                <td>{{ getting['getting_by'] }}</td>
+                <td>{{ getting['contact_info'] }}</td>
+                <td>{{ getting['getting_type'] }}</td>
+                <td>{{ getting['reason'] }}</td>
                 <td><a href="{{ url_for('edit_getting', id=getting['id']) }}">Редактировать</a></td>
             </tr>
             {% endfor %}

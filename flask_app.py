@@ -258,6 +258,10 @@ def get_filtered_values():
         table2 = request.form.get('table2')
         attr2 = request.form.get('attr2')
 
+        # Валидация входных данных
+        if not all([table1, attr1, value1, table2, attr2]):
+            return jsonify({'error': 'Все параметры должны быть указаны'}), 400
+
         with get_db_connection() as conn:
             cursor = conn.cursor()
             if table1 == 'breeds' and table2 == 'dogs' and attr1 == 'id' and attr2 == 'name':
@@ -270,9 +274,29 @@ def get_filtered_values():
                 """
                 values = [row['name'] for row in cursor.execute(query, (value1,)).fetchall()]
             else:
-                query = f"SELECT DISTINCT {attr2} FROM {table2} ORDER BY {attr2}"
-                values = [row[attr2] for row in cursor.execute(query).fetchall()]
+                # Общий случай для POST
+                table_relationships = {
+                    ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
+                    ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+                    ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
+                    ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
+                    ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
+                    ('breeds', 'vet_examinations'): ('b', 've', 'JOIN dogs d ON d.breeds_id = b.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+                }
+                if (table1, table2) in table_relationships:
+                    alias0, alias1, join_condition = table_relationships[(table1, table2)]
+                    query = f"""
+                        SELECT DISTINCT {alias1}.{attr2}
+                        FROM {table1} {alias0}
+                        {join_condition}
+                        WHERE {alias0}.{attr1} = ?
+                        ORDER BY {alias1}.{attr2}
+                    """
+                    values = [row[attr2] for row in cursor.execute(query, (value1,)).fetchall()]
+                else:
+                    return jsonify({'error': f'Нет связи между {table1} и {table2}'}), 400
             return jsonify(values)
+
     else:
         # Обработка GET-запроса (одна или две таблицы)
         table0 = request.args.get('table0')  # Первая таблица
@@ -282,19 +306,17 @@ def get_filtered_values():
         second_attr = request.args.get('second_attr')
 
         # Валидация входных данных
-        if not table0 or not first_attr or not first_value or not second_attr:
+        if not all([table0, first_attr, first_value, second_attr]):
             return jsonify({'error': 'Все обязательные параметры должны быть указаны'}), 400
 
         # Словарь связей между таблицами
         table_relationships = {
-            ('breeds', 'dogs'): ('b', 'd', 'd.breeds_id = b.id'),
-            ('dogs', 'config'): ('d', 'conf', 'd.config_id = conf.id'),
-            ('dogs', 'vet_examinations'): ('d', 've', 'd.vet_examinations_id = ve.id'),
-            ('dogs', 'locations'): ('d', 'l', 'd.location_id = l.id'),
-            ('dogs', 'getting'): ('d', 'g', 'd.getting_id = g.id'),
             ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
+            ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
             ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
+            ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
             ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
+            ('breeds', 'vet_examinations'): ('b', 've', 'JOIN dogs d ON d.breeds_id = b.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
         }
 
         with get_db_connection() as conn:
@@ -305,7 +327,7 @@ def get_filtered_values():
                 query = f"""
                     SELECT DISTINCT {alias1}.{second_attr}
                     FROM {table0} {alias0}
-                    JOIN {table1} {alias1} ON {join_condition}
+                    {join_condition}
                     WHERE {alias0}.{first_attr} = ?
                     ORDER BY {alias1}.{second_attr}
                 """
@@ -319,7 +341,7 @@ def get_filtered_values():
                 """
 
             try:
-                values = [row[second_attr] for row in cursor.execute(query, (first_value,)).fetchall()]
+                values = [row[0] for row in cursor.execute(query, (first_value,)).fetchall()]
                 return jsonify(values)
             except sqlite3.OperationalError as e:
                 return jsonify({'error': str(e)}), 500
@@ -354,13 +376,13 @@ def sync_queries():
     errors = []
     values1 = []  # Инициализация по умолчанию
     values2 = []  # Инициализация по умолчанию
+
     # Список таблиц
     tables = {
         'dogs': 'Собаки',
         'breeds': 'Породы',
         'vet_examinations': 'Ветеринарные осмотры',
         'locations': 'Места размещения',
-        'getting': 'Получение приютом'
     }
 
     # Атрибуты для каждой таблицы
@@ -420,20 +442,20 @@ def sync_queries():
             'reason': {'type': 'text', 'label': 'Причина передачи'}
         }
     }
+
     if request.method == 'POST':
-        selected_table = request.form.get('table') if request.method == 'POST' else None
-        selected_table1 = request.form.get('table1') if request.method == 'POST' else None  # Вторая таблица
-        selected_attr1 = request.form.get('first_attribute') if request.method == 'POST' else None
-        selected_value1 = request.form.get('first_value') if request.method == 'POST' else None
-        selected_attr2 = request.form.get('second_attribute') if request.method == 'POST' else None
-        selected_value2 = request.form.get('second_value') if request.method == 'POST' else None
+        selected_table = request.form.get('table')
+        selected_table1 = request.form.get('table1')
+        selected_attr1 = request.form.get('first_attribute')
+        selected_value1 = request.form.get('first_value')
+        selected_attr2 = request.form.get('second_attribute')
+        selected_value2 = request.form.get('second_value')
 
         # Получаем атрибуты для выбранной таблицы
         attrs = attributes.get(selected_table, {}) if selected_table else {}
-        attrs1 = attributes.get(selected_table1, {}) if selected_table1 else {}  # Атрибуты второй таблицы
+        attrs1 = attributes.get(selected_table1, {}) if selected_table1 else {}
 
         # Получаем уникальные значения для первого атрибута
-        values1 = []
         if selected_table and selected_attr1:
             with get_db_connection() as conn:
                 cursor = conn.cursor()
@@ -441,17 +463,14 @@ def sync_queries():
                 values1 = [row[selected_attr1] for row in cursor.execute(query).fetchall()]
 
         # Получаем уникальные значения для второго атрибута с учетом первой таблицы и её значения
-        values2 = []
         if selected_table and selected_table1 and selected_attr2 and selected_value1:
             table_relationships = {
-                ('breeds', 'dogs'): ('b', 'd', 'd.breeds_id = b.id'),
-                ('dogs', 'config'): ('d', 'conf', 'd.config_id = conf.id'),
-                ('dogs', 'vet_examinations'): ('d', 've', 'd.vet_examinations_id = ve.id'),
-                ('dogs', 'locations'): ('d', 'l', 'd.location_id = l.id'),
-                ('dogs', 'getting'): ('d', 'g', 'd.getting_id = g.id'),
                 ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
+                ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
                 ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
+                ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
                 ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
+                ('breeds', 'vet_examinations'): ('b', 've', 'JOIN dogs d ON d.breeds_id = b.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
             }
             if (selected_table, selected_table1) in table_relationships:
                 alias0, alias1, join_condition = table_relationships[(selected_table, selected_table1)]
@@ -460,81 +479,82 @@ def sync_queries():
                     query = f"""
                         SELECT DISTINCT {alias1}.{selected_attr2}
                         FROM {selected_table} {alias0}
-                        JOIN {selected_table1} {alias1} ON {join_condition}
+                        {join_condition}
                         WHERE {alias0}.{selected_attr1} = ?
                         ORDER BY {alias1}.{selected_attr2}
                     """
-                    values2 = [row[selected_attr2] for row in cursor.execute(query, (selected_value1,)).fetchall()]
+                    try:
+                        values2 = [row[selected_attr2] for row in cursor.execute(query, (selected_value1,)).fetchall()]
+                    except sqlite3.OperationalError as e:
+                        errors.append(f"Ошибка при получении значений второго атрибута: {str(e)}")
+                        values2 = []
             else:
-                # Если таблицы не связаны, используем только первую таблицу
                 with get_db_connection() as conn:
                     cursor = conn.cursor()
                     query = f"SELECT DISTINCT {selected_attr2} FROM {selected_table} WHERE {selected_attr1} = ? ORDER BY {selected_attr2}"
-                    values2 = [row[selected_attr2] for row in cursor.execute(query, (selected_value1,)).fetchall()]
-
-        # Обработка POST-запроса
-        if request.method == 'POST':
-            if not selected_table or selected_table not in tables:
-                errors.append("Выберите первую таблицу")
-            elif not selected_attr1 or selected_attr1 not in attrs:
-                errors.append("Выберите первый атрибут")
-            elif not selected_value1:
-                errors.append("Выберите значение для первого атрибута")
-            elif selected_attr2 and not selected_table1:
-                errors.append("Выберите вторую таблицу, если выбран второй атрибут")
-            elif selected_attr2 and selected_attr2 not in attrs1:
-                errors.append("Выберите корректный второй атрибут")
-            elif selected_attr2 and not selected_value2:
-                errors.append("Выберите значение для второго атрибута")
-            else:
-                with get_db_connection() as conn:
-                    cursor = conn.cursor()
-                    # Словарь связей между таблицами
-                    table_relationships = {
-                        ('breeds', 'dogs'): ('b', 'd', 'd.breeds_id = b.id'),
-                        ('dogs', 'config'): ('d', 'conf', 'd.config_id = conf.id'),
-                        ('dogs', 'vet_examinations'): ('d', 've', 'd.vet_examinations_id = ve.id'),
-                        ('dogs', 'locations'): ('d', 'l', 'd.location_id = l.id'),
-                        ('dogs', 'getting'): ('d', 'g', 'd.getting_id = g.id'),
-                        ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
-                        ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
-                        ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
-                    }
-
-                    if selected_table1 and (selected_table, selected_table1) in table_relationships:
-                        # Работа с двумя таблицами
-                        alias0, alias1, join_condition = table_relationships[(selected_table, selected_table1)]
-                        query = f"""
-                            SELECT {alias1}.*
-                            FROM {selected_table} {alias0}
-                            JOIN {selected_table1} {alias1} ON {join_condition}
-                            WHERE {alias0}.{selected_attr1} = ?
-                        """
-                        params = [selected_value1]
-                        if selected_attr2 and selected_value2:
-                            query += f" AND {alias1}.{selected_attr2} = ?"
-                            params.append(selected_value2)
-                    else:
-                        # Работа с одной таблицей
-                        query = f"SELECT * FROM {selected_table} WHERE {selected_attr1} = ?"
-                        params = [selected_value1]
-                        if selected_attr2 and selected_value2:
-                            query += f" AND {selected_attr2} = ?"
-                            params.append(selected_value2)
-
                     try:
-                        results = cursor.execute(query, params).fetchall()
+                        values2 = [row[selected_attr2] for row in cursor.execute(query, (selected_value1,)).fetchall()]
                     except sqlite3.OperationalError as e:
-                        errors.append(f"Ошибка базы данных: {str(e)}")
-                        
-                    selected_table = None
-                    selected_attr1 = None
-                    selected_value1 = None
-                    selected_table1 = None
-                    selected_attr2 = None
-                    selected_value2 = None    
-                    values1 = []  # Инициализация по умолчанию
-                    values2 = []  # Инициализация по умолчанию
+                        errors.append(f"Ошибка при получении значений второго атрибута: {str(e)}")
+                        values2 = []
+
+        # Валидация POST-запроса
+        if not selected_table or selected_table not in tables:
+            errors.append("Выберите первую таблицу")
+        elif not selected_attr1 or selected_attr1 not in attrs:
+            errors.append("Выберите первый атрибут")
+        elif not selected_value1:
+            errors.append("Выберите значение для первого атрибута")
+        elif selected_attr2 and not selected_table1:
+            errors.append("Выберите вторую таблицу, если выбран второй атрибут")
+        elif selected_attr2 and selected_attr2 not in attrs1:
+            errors.append("Выберите корректный второй атрибут")
+        elif selected_attr2 and not selected_value2:
+            errors.append("Выберите значение для второго атрибута")
+        else:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                # Словарь связей между таблицами
+                table_relationships = {
+                    ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
+                    ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+                    ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
+                    ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
+                    ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
+                    ('breeds', 'vet_examinations'): ('b', 've', 'JOIN dogs d ON d.breeds_id = b.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+                }
+
+                if selected_table1 and (selected_table, selected_table1) in table_relationships:
+                    alias0, alias1, join_condition = table_relationships[(selected_table, selected_table1)]
+                    query = f"""
+                        SELECT {alias1}.*
+                        FROM {selected_table} {alias0}
+                        {join_condition}
+                        WHERE {alias0}.{selected_attr1} = ?
+                    """
+                    params = [selected_value1]
+                    if selected_attr2 and selected_value2:
+                        query += f" AND {alias1}.{selected_attr2} = ?"
+                        params.append(selected_value2)
+                else:
+                    query = f"SELECT * FROM {selected_table} WHERE {selected_attr1} = ?"
+                    params = [selected_value1]
+                    if selected_attr2 and selected_value2:
+                        query += f" AND {selected_attr2} = ?"
+                        params.append(selected_value2)
+
+                try:
+                    results = cursor.execute(query, params).fetchall()
+                except sqlite3.OperationalError as e:
+                    errors.append(f"Ошибка базы данных: {str(e)}")
+
+                # Сброс переменных после обработки
+                selected_table = None
+                selected_attr1 = None
+                selected_value1 = None
+                selected_table1 = None
+                selected_attr2 = None
+                selected_value2 = None
 
     # Передача данных в шаблон
     return render_template('sync_queries.html', tables=tables, attributes=attributes, results=results, errors=errors,
@@ -542,7 +562,6 @@ def sync_queries():
                            selected_attr1=selected_attr1, selected_value1=selected_value1,
                            selected_attr2=selected_attr2, selected_value2=selected_value2,
                            values1=values1, values2=values2)
-
 @app.route('/add_breed', methods=['POST'])
 def add_breed():
     data = request.get_json()
@@ -913,12 +932,12 @@ def vet_examinations():
         """).fetchall()
     return render_template('vet_examinations.html', examinations=examinations, dogs=dogs, errors=errors)
 
-# Управление получением собак
 @app.route('/getting', methods=['GET', 'POST'])
 def getting():
     errors = []
     with get_db_connection() as conn:
-        dogs = conn.execute("SELECT id, name FROM dogs ORDER BY name").fetchall()
+        cursor = conn.cursor()
+        dogs = cursor.execute("SELECT id, name FROM dogs ORDER BY name").fetchall()
 
     if request.method == 'POST':
         data = {
@@ -932,24 +951,27 @@ def getting():
             with get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT INTO getting (dog_id, getting_by, contact_info, getting_type, reason)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (data['dog_id'], data['getting_by'], data['contact_info'], data['getting_type'], data['reason']))
+                    INSERT INTO getting (getting_by, contact_info, getting_type, reason)
+                    VALUES (?, ?, ?, ?)
+                """, (data['getting_by'], data['contact_info'], data['getting_type'], data['reason']))
                 conn.commit()
+
     with get_db_connection() as conn:
-        gettings = conn.execute("""
+        cursor = conn.cursor()
+        gettings = cursor.execute("""
             SELECT g.id, g.getting_by, g.contact_info, g.getting_type, g.reason
             FROM getting g
             ORDER BY g.id
         """).fetchall()
+
     return render_template('getting.html', gettings=gettings, dogs=dogs, errors=errors)
-    
-# Управление получением собак
-@app.route('/gettings', methods=['GET', 'POST'])
-def gettings():
+  
+@app.route('/edit_getting/<int:id>', methods=['GET', 'POST'])
+def edit_getting(id):
     errors = []
     with get_db_connection() as conn:
-        dogs = conn.execute("SELECT id, name FROM dogs ORDER BY name").fetchall()
+        cursor = conn.cursor()
+        dogs = cursor.execute("SELECT id, name FROM dogs ORDER BY name").fetchall()
 
     if request.method == 'POST':
         data = {
@@ -963,18 +985,23 @@ def gettings():
             with get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT INTO getting (dog_id, getting_by, contact_info, getting_type, reason)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (data['dog_id'], data['getting_by'], data['contact_info'], data['getting_type'], data['reason']))
+                    UPDATE getting 
+                    SET getting_by = ?, contact_info = ?, getting_type = ?, reason = ?
+                    WHERE id = ?
+                """, (data['getting_by'], data['contact_info'], data['getting_type'], data['reason'], id))
                 conn.commit()
+            return redirect(url_for('getting'))
+
     with get_db_connection() as conn:
-        gettings = conn.execute("""
-            SELECT g.id, g.getting_by, g.contact_info, g.getting_type, g.reason
-            FROM getting g
-            ORDER BY g.id
-        """).fetchall()
-    return render_template('getting.html', gettings=gettings, dogs=dogs, errors=errors)
-    
+        cursor = conn.cursor()
+        getting = cursor.execute("""
+            SELECT id, getting_by, contact_info, getting_type, reason
+            FROM getting 
+            WHERE id = ?
+        """, (id,)).fetchone()
+        if not getting:
+            errors.append("Запись не найдена")
+    return render_template('edit_getting.html', getting=getting, dogs=dogs, errors=errors)  
 
 # Статистика
 @app.route('/stats')
