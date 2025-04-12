@@ -595,49 +595,159 @@ def add_location():
 @app.route('/add_detailed', methods=['GET', 'POST'])
 def add_detailed():
     errors = []
+
+    # Получаем данные для выпадающих списков
     with get_db_connection() as conn:
-        breeds = conn.execute("SELECT id, breed_name FROM breeds ORDER BY breed_name").fetchall()
-        locations = conn.execute("SELECT id, location_name FROM locations ORDER BY location_name").fetchall()
         coat_types = conn.execute("SELECT id, coat_type_name FROM coat_type ORDER BY coat_type_name").fetchall()
         color_variations = conn.execute("SELECT id, color_variations_name FROM color_variations ORDER BY color_variations_name").fetchall()
         temperaments = conn.execute("SELECT id, temperament_name FROM temperament ORDER BY temperament_name").fetchall()
         sizes = conn.execute("SELECT id, size_name FROM size ORDER BY size_name").fetchall()
-        gettings = conn.execute("SELECT id, getting_by, getting_type FROM getting ORDER BY getting_by").fetchall()
-        vet_examinations = conn.execute("SELECT id, examination_date, diagnosis FROM vet_examinations ORDER BY examination_date").fetchall()
 
     if request.method == 'POST':
-        data = {
+        # Собираем данные из формы
+        dog_data = {
             'name': request.form['name'],
             'birth_date': request.form['birth_date'] or None,
             'registration_date': request.form['registration_date'] or None,
-            'microchip_number': request.form['microchip_number'] or None,
-            'breed_id': request.form['breed_id'],
-            'location_id': request.form['location_id'] or None,
-            'coat_type': request.form['coat_type'] or None,
-            'color_variations': request.form['color_variations'] or None,
-            'temperament': request.form['temperament'] or None,
-            'size': request.form['size'] or None,
-            'getting_id': request.form['getting_id'] or None,
-            'vet_examinations_id': request.form['vet_examinations_id'] or None
+            'microchip_number': request.form['microchip_number'] or None
         }
 
-        errors = validate_data(data, VALIDATION_RULES['dogs'])
+        breed_data = {
+            'breed_name': request.form['breed_name'],
+            'breed_group': request.form['breed_group'] or None,
+            'origin_country': request.form['origin_country'] or None,
+            'average_lifes': request.form['average_lifes'] or None,
+            'typical_use': request.form['typical_use'] or None,
+            'common_health_issues': request.form['common_health_issues'] or None,
+            'recommended_vaccinations': request.form['recommended_vaccinations'] or None,
+            'veterinary_care': request.form['veterinary_care'] or None,
+            'average_weight_male': request.form['average_weight_male'] or None,
+            'average_weight_female': request.form['average_weight_female'] or None,
+            'trainability_level': request.form['trainability_level'] or None,
+            'recommended_training_age': request.form['recommended_training_age'] or None,
+            'common_behavioral_issues': request.form['common_behavioral_issues'] or None,
+            'preferred_training_methods': request.form['preferred_training_methods'] or None,
+            'typical_learning_period': request.form['typical_learning_period'] or None
+        }
+
+        location_data = {
+            'location_name': request.form['location_name'],
+            'location_type': request.form['location_type'] or None,
+            'address': request.form['address'] or None,
+            'contact_info': request.form['location_contact_info'] or None,
+            'price': request.form['price'] or None,
+            'availability': request.form['availability'] or None,
+            'website': request.form['website'] or None
+        }
+
+        getting_data = {
+            'getting_by': request.form['getting_by'] or None,
+            'contact_info': request.form['getting_contact_info'] or None,
+            'getting_type': request.form['getting_type'] or None,
+            'reason': request.form['reason'] or None
+        }
+
+        vet_examination_data = {
+            'examination_date': request.form['examination_date'] or None,
+            'veterinarian_name': request.form['veterinarian_name'] or None,
+            'diagnosis': request.form['diagnosis'] or None,
+            'treatment': request.form['treatment'] or None,
+            'next_examination_date': request.form['next_examination_date'] or None
+        }
+
+        # Данные для выпадающих списков (ID)
+        coat_type_id = request.form['coat_type'] or None
+        color_variations_id = request.form['color_variations'] or None
+        temperament_id = request.form['temperament'] or None
+        size_id = request.form['size'] or None
+
+        # Валидация данных
+        errors.extend(validate_data(dog_data, VALIDATION_RULES['dogs']))
+        errors.extend(validate_data(breed_data, VALIDATION_RULES['breeds']))
+        errors.extend(validate_data(location_data, VALIDATION_RULES['locations']))
+        errors.extend(validate_data(getting_data, VALIDATION_RULES['getting']))
+        errors.extend(validate_data(vet_examination_data, VALIDATION_RULES['vet_examinations']))
+
+        # Дополнительная валидация обязательных полей
+        if not dog_data['name']:
+            errors.append("Кличка собаки обязательна")
+        if not breed_data['breed_name']:
+            errors.append("Название породы обязательно")
+        if not location_data['location_name']:
+            errors.append("Название места размещения обязательно")
+
         if not errors:
             with get_db_connection() as conn:
                 cursor = conn.cursor()
+
+                # Добавление породы
                 cursor.execute("""
-                    INSERT INTO dogs (name, birth_date, registration_date, microchip_number, breeds_id, location_id, 
-                                      coat_type, color_variations, temperament, size, getting_id, vet_examinations_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (data['name'], data['birth_date'], data['registration_date'], data['microchip_number'],
-                      data['breed_id'], data['location_id'], data['coat_type'], data['color_variations'],
-                      data['temperament'], data['size'], data['getting_id'], data['vet_examinations_id']))
+                    INSERT INTO breeds (breed_name, breed_group, origin_country, average_lifes, typical_use,
+                                        common_health_issues, recommended_vaccinations, veterinary_care,
+                                        average_weight_male, average_weight_female, trainability_level,
+                                        recommended_training_age, common_behavioral_issues, preferred_training_methods,
+                                        typical_learning_period)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (breed_data['breed_name'], breed_data['breed_group'], breed_data['origin_country'],
+                      breed_data['average_lifes'], breed_data['typical_use'], breed_data['common_health_issues'],
+                      breed_data['recommended_vaccinations'], breed_data['veterinary_care'],
+                      breed_data['average_weight_male'], breed_data['average_weight_female'],
+                      breed_data['trainability_level'], breed_data['recommended_training_age'],
+                      breed_data['common_behavioral_issues'], breed_data['preferred_training_methods'],
+                      breed_data['typical_learning_period']))
+                breed_id = cursor.lastrowid
+
+                # Добавление места размещения
+                cursor.execute("""
+                    INSERT INTO locations (location_name, location_type, address, contact_info, price, availability, website)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (location_data['location_name'], location_data['location_type'], location_data['address'],
+                      location_data['contact_info'], location_data['price'], location_data['availability'],
+                      location_data['website']))
+                location_id = cursor.lastrowid
+
+                # Добавление записи о получении
+                getting_id = None
+                if getting_data['getting_by']:
+                    cursor.execute("""
+                        INSERT INTO getting (getting_by, contact_info, getting_type, reason)
+                        VALUES (?, ?, ?, ?)
+                    """, (getting_data['getting_by'], getting_data['contact_info'], getting_data['getting_type'],
+                          getting_data['reason']))
+                    getting_id = cursor.lastrowid
+
+                # Добавление собаки
+                cursor.execute("""
+                    INSERT INTO dogs (name, birth_date, registration_date, microchip_number, breeds_id, location_id,
+                                      coat_type, color_variations, temperament, size, getting_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (dog_data['name'], dog_data['birth_date'], dog_data['registration_date'],
+                      dog_data['microchip_number'], breed_id, location_id, coat_type_id, color_variations_id,
+                      temperament_id, size_id, getting_id))
+                dog_id = cursor.lastrowid
+
+                # Добавление ветеринарного осмотра
+                vet_examination_id = None
+                if vet_examination_data['examination_date']:
+                    cursor.execute("""
+                        INSERT INTO vet_examinations (dog_id, examination_date, veterinarian_name, diagnosis, treatment,
+                                                      next_examination_date)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (dog_id, vet_examination_data['examination_date'], vet_examination_data['veterinarian_name'],
+                          vet_examination_data['diagnosis'], vet_examination_data['treatment'],
+                          vet_examination_data['next_examination_date']))
+                    vet_examination_id = cursor.lastrowid
+
+                # Обновление собаки с vet_examinations_id
+                if vet_examination_id:
+                    cursor.execute("UPDATE dogs SET vet_examinations_id = ? WHERE id = ?",
+                                  (vet_examination_id, dog_id))
+
                 conn.commit()
             return redirect(url_for('view'))
 
-    return render_template('add_detailed.html', errors=errors, breeds=breeds, locations=locations,
-                          coat_types=coat_types, color_variations=color_variations, temperaments=temperaments,
-                          sizes=sizes, gettings=gettings, vet_examinations=vet_examinations)
+    return render_template('add_detailed.html', errors=errors, coat_types=coat_types,
+                           color_variations=color_variations, temperaments=temperaments, sizes=sizes)
 
 # Просмотр собак
 @app.route('/view')
@@ -668,15 +778,16 @@ def search():
     location_name = None
     no_results = False
 
-    # Получаем уникальные списки пород и мест размещения
     with get_db_connection() as conn:
         breeds = [row['breed_name'] for row in conn.execute("SELECT DISTINCT breed_name FROM breeds ORDER BY breed_name").fetchall()]
         locations = [row['location_name'] for row in conn.execute("SELECT DISTINCT location_name FROM locations ORDER BY location_name").fetchall()]
 
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
-        breed_name = request.form.get('breed_name')
-        location_name = request.form.get('location_name')
+        breed_name = request.form.get('breed_name', '').strip()
+        location_name = request.form.get('location_name', '').strip()
+
+        print(f"Search input: name='{name}', breed_name='{breed_name}', location_name='{location_name}'")  # Отладка
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -693,13 +804,14 @@ def search():
                 query += " AND LOWER(TRIM(d.name)) LIKE LOWER(?)"
                 params.append(f"%{name}%")
             if breed_name:
-                query += " AND LOWER(b.breed_name) = LOWER(?)"
                 params.append(breed_name)
             if location_name:
-                query += " AND LOWER(l.location_name) = LOWER(?)"
+                query += " AND LOWER(TRIM(l.location_name)) = LOWER(?)"
                 params.append(location_name)
 
+            print(f"Query: {query}, Params: {params}")  # Отладка
             results = cursor.execute(query, params).fetchall()
+            print(f"Results: {[dict(row) for row in results]}")  # Отладка
             if not results:
                 no_results = True
 
@@ -1008,16 +1120,18 @@ def edit_getting(id):
 def stats():
     with get_db_connection() as conn:
         by_breed = conn.execute("""
-            SELECT b.breed_name, COUNT(d.id) AS dog_count 
-            FROM dogs d 
-            JOIN breeds b ON d.breeds_id = b.id 
+            SELECT b.breed_name, COALESCE(COUNT(d.id), 0) AS dog_count 
+            FROM breeds b 
+            LEFT JOIN dogs d ON d.breeds_id = b.id 
             GROUP BY b.breed_name
+            ORDER BY b.breed_name
         """).fetchall()
         by_location = conn.execute("""
-            SELECT l.location_name, COUNT(d.id) AS dog_count 
-            FROM dogs d 
-            JOIN locations l ON d.location_id = l.id 
+            SELECT l.location_name, COALESCE(COUNT(d.id), 0) AS dog_count 
+            FROM locations l 
+            LEFT JOIN dogs d ON d.location_id = l.id 
             GROUP BY l.location_name
+            ORDER BY l.location_name
         """).fetchall()
     return render_template('stats.html', by_breed=by_breed, by_location=by_location)
 

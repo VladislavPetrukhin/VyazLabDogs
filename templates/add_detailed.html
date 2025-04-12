@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <title>Добавить собаку (подробно)</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
 </head>
 <body>
     <h1>Добавить собаку (подробный режим)</h1>
 
-        <nav>
+    <nav>
         <a href="/">Главная</a> |
         <a href="/search">Поиск</a> |
         <a href="/view">Собаки</a> |
@@ -21,6 +22,7 @@
         <a href="/stats">Статистика</a> |
         <a href="/sync_queries">Запросы синхр.</a>
     </nav>
+
     {% if errors %}
         <ul class="errors">
             {% for error in errors %}
@@ -31,31 +33,86 @@
 
     <form method="POST">
         <h2>Информация о собаке</h2>
-        <label for="name">Кличка:</label><br>
+        <label for="name">Кличка (5-100 символов):</label><br>
         <input type="text" name="name" id="name" required><br>
         <label for="birth_date">Дата рождения (ГГГГ-ММ-ДД):</label><br>
         <input type="date" name="birth_date" id="birth_date"><br>
         <label for="registration_date">Дата регистрации (ГГГГ-ММ-ДД):</label><br>
         <input type="date" name="registration_date" id="registration_date"><br>
-        <label for="microchip_number">Номер микрочипа:</label><br>
+        <label for="microchip_number">Номер микрочипа (10-20 символов):</label><br>
         <input type="text" name="microchip_number" id="microchip_number"><br>
 
-        <label for="breed_id">Порода:</label><br>
-        <select name="breed_id" id="breed_id" required>
-            <option value="">-- Выберите породу --</option>
-            {% for breed in breeds %}
-                <option value="{{ breed.id }}">{{ breed.breed_name }}</option>
-            {% endfor %}
-        </select><br>
+        <h2>Информация о породе</h2>
+        <label for="breed_name">Название породы (3-100 символов):</label><br>
+        <input type="text" name="breed_name" id="breed_name" required><br>
+        <label for="breed_group">Группа породы:</label><br>
+        <input type="text" name="breed_group" id="breed_group"><br>
+        <label for="origin_country">Страна происхождения:</label><br>
+        <input type="text" name="origin_country" id="origin_country"><br>
+        <label for="average_lifes">Средняя продолжительность жизни (5-20 лет):</label><br>
+        <input type="number" name="average_lifes" id="average_lifes" min="5" max="20"><br>
+        <label for="typical_use">Типичное использование:</label><br>
+        <input type="text" name="typical_use" id="typical_use"><br>
+        <label for="common_health_issues">Распространённые проблемы со здоровьем:</label><br>
+        <textarea name="common_health_issues" id="common_health_issues"></textarea><br>
+        <label for="recommended_vaccinations">Рекомендуемые вакцинации:</label><br>
+        <textarea name="recommended_vaccinations" id="recommended_vaccinations"></textarea><br>
+        <label for="veterinary_care">Потребности в ветеринарном уходе:</label><br>
+        <textarea name="veterinary_care" id="veterinary_care"></textarea><br>
+        <label for="average_weight_male">Средний вес самцов (кг):</label><br>
+        <input type="number" name="average_weight_male" id="average_weight_male" step="0.1"><br>
+        <label for="average_weight_female">Средний вес самок (кг):</label><br>
+        <input type="number" name="average_weight_female" id="average_weight_female" step="0.1"><br>
+        <label for="trainability_level">Уровень обучаемости:</label><br>
+        <input type="text" name="trainability_level" id="trainability_level"><br>
+        <label for="recommended_training_age">Рекомендуемый возраст начала дрессировки (месяцы):</label><br>
+        <input type="number" name="recommended_training_age" id="recommended_training_age"><br>
+        <label for="common_behavioral_issues">Распространённые поведенческие проблемы:</label><br>
+        <textarea name="common_behavioral_issues" id="common_behavioral_issues"></textarea><br>
+        <label for="preferred_training_methods">Предпочтительные методы дрессировки:</label><br>
+        <textarea name="preferred_training_methods" id="preferred_training_methods"></textarea><br>
+        <label for="typical_learning_period">Типичный период обучения (месяцы):</label><br>
+        <input type="number" name="typical_learning_period" id="typical_learning_period"><br>
 
-        <label for="location_id">Место размещения:</label><br>
-        <select name="location_id" id="location_id">
-            <option value="">-- Выберите место --</option>
-            {% for location in locations %}
-                <option value="{{ location.id }}">{{ location.location_name }}</option>
-            {% endfor %}
-        </select><br>
+        <h2>Информация о месте размещения</h2>
+        <label for="location_name">Название места (3-100 символов):</label><br>
+        <input type="text" name="location_name" id="location_name" required><br>
+        <label for="location_type">Тип места:</label><br>
+        <input type="text" name="location_type" id="location_type"><br>
+        <label for="address">Адрес (5-200 символов):</label><br>
+        <input type="text" name="address" id="address"><br>
+        <label for="location_contact_info">Контактная информация:</label><br>
+        <input type="text" name="location_contact_info" id="location_contact_info"><br>
+        <label for="price">Стоимость (₽):</label><br>
+        <input type="number" name="price" id="price" step="0.01"><br>
+        <label for="availability">Количество собак:</label><br>
+        <input type="number" name="availability" id="availability"><br>
+        <label for="website">Сайт:</label><br>
+        <input type="text" name="website" id="website"><br>
 
+        <h2>Информация о получении собаки</h2>
+        <label for="getting_by">Кем передана (3-100 символов):</label><br>
+        <input type="text" name="getting_by" id="getting_by"><br>
+        <label for="getting_contact_info">Контактная информация (5-100 символов):</label><br>
+        <input type="text" name="getting_contact_info" id="getting_contact_info"><br>
+        <label for="getting_type">Тип передачи (3-50 символов):</label><br>
+        <input type="text" name="getting_type" id="getting_type"><br>
+        <label for="reason">Причина передачи (5-200 символов):</label><br>
+        <textarea name="reason" id="reason"></textarea><br>
+
+        <h2>Информация о ветеринарном осмотре</h2>
+        <label for="examination_date">Дата осмотра (ГГГГ-ММ-ДД):</label><br>
+        <input type="date" name="examination_date" id="examination_date"><br>
+        <label for="veterinarian_name">Имя ветеринара:</label><br>
+        <input type="text" name="veterinarian_name" id="veterinarian_name"><br>
+        <label for="diagnosis">Диагноз (5-200 символов):</label><br>
+        <textarea name="diagnosis" id="diagnosis"></textarea><br>
+        <label for="treatment">Лечение (5-200 символов):</label><br>
+        <textarea name="treatment" id="treatment"></textarea><br>
+        <label for="next_examination_date">Дата следующего осмотра (ГГГГ-ММ-ДД):</label><br>
+        <input type="date" name="next_examination_date" id="next_examination_date"><br>
+
+        <h2>Дополнительные характеристики</h2>
         <label for="coat_type">Тип шерсти:</label><br>
         <select name="coat_type" id="coat_type">
             <option value="">-- Выберите тип --</option>
@@ -85,22 +142,6 @@
             <option value="">-- Выберите размер --</option>
             {% for s in sizes %}
                 <option value="{{ s.id }}">{{ s.size_name }}</option>
-            {% endfor %}
-        </select><br>
-
-        <label for="getting_id">Получение собаки:</label><br>
-        <select name="getting_id" id="getting_id">
-            <option value="">-- Выберите запись --</option>
-            {% for g in gettings %}
-                <option value="{{ g.id }}">{{ g.getting_by }} ({{ g.getting_type }})</option>
-            {% endfor %}
-        </select><br>
-
-        <label for="vet_examinations_id">Ветеринарный осмотр:</label><br>
-        <select name="vet_examinations_id" id="vet_examinations_id">
-            <option value="">-- Выберите осмотр --</option>
-            {% for ve in vet_examinations %}
-                <option value="{{ ve.id }}">{{ ve.examination_date }} - {{ ve.diagnosis }}</option>
             {% endfor %}
         </select><br>
 
