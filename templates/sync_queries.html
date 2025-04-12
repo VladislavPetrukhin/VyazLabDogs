@@ -2,56 +2,12 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Запросы по синхронизированным атрибутам</title>
+    <title>Запросы синхронизированные</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
-    <script>
-        function updateAttributes() {
-            var tableSelect = document.getElementById('table');
-            var attributeSelect = document.getElementById('attribute');
-            var selectedTable = tableSelect.value;
-            attributeSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
-
-            if (selectedTable) {
-                fetch('/get_attributes?table=' + selectedTable)
-                    .then(response => response.json())
-                    .then(data => {
-                        data.forEach(attr => {
-                            var option = document.createElement('option');
-                            option.value = attr.key;
-                            option.text = attr.label;
-                            attributeSelect.appendChild(option);
-                        });
-                        updateValues(); // Обновляем значения после выбора таблицы
-                    });
-            }
-        }
-
-        function updateValues() {
-            var tableSelect = document.getElementById('table');
-            var attributeSelect = document.getElementById('attribute');
-            var valueSelect = document.getElementById('value');
-            var selectedTable = tableSelect.value;
-            var selectedAttribute = attributeSelect.value;
-
-            valueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
-            if (selectedTable && selectedAttribute) {
-                fetch('/get_attribute_values?table=' + selectedTable + '&attribute=' + selectedAttribute)
-                    .then(response => response.json())
-                    .then(data => {
-                        data.forEach(value => {
-                            var option = document.createElement('option');
-                            option.value = value;
-                            option.text = value;
-                            valueSelect.appendChild(option);
-                        });
-                    });
-            }
-        }
-    </script>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
 </head>
 <body>
-    <h1>Запросы по синхронизированным атрибутам</h1>
+    <h1>Запросы синхронизированные</h1>
     <nav>
         <a href="/">Главная</a> |
         <a href="/search">Поиск</a> |
@@ -65,6 +21,7 @@
         <a href="/queries">Запросы</a> |
         <a href="/sync_queries">Запросы синхр.</a>
     </nav>
+
     {% if errors %}
         <ul class="errors">
             {% for error in errors %}
@@ -73,64 +30,89 @@
         </ul>
     {% endif %}
 
-    <form method="POST">
-        <label for="table">Атрибут 1:</label><br>
+    <h2>Поиск по атрибутам</h2>
+    <form method="POST" id="searchForm">
+        <label for="table">Выберите таблицу:</label><br>
         <select name="table" id="table" onchange="updateAttributes()" required>
-            <option value="">-- Выберите атрибут --</option>
-            {% for table_name, attrs in tables.items() %}
-                <option value="{{ table_name }}" {% if table_name == selected_table %}selected{% endif %}>
-                    {{ table_name }}
-                </option>
+            <option value="">-- Выберите таблицу --</option>
+            {% for table_id, table_name in tables.items() %}
+                <option value="{{ table_id }}" {% if table_id == selected_table %}selected{% endif %}>{{ table_name }}</option>
             {% endfor %}
         </select><br>
 
-        <label for="attribute">Атрибут 2:</label><br>
-        <select name="attribute" id="attribute" onchange="updateValues()" required>
+        <label for="first_attribute">Выберите первый атрибут:</label><br>
+        <select name="first_attribute" id="first_attribute" onchange="updateFirstValues()" required>
             <option value="">-- Выберите атрибут --</option>
-            {% if selected_table and attributes %}
-                {% for key, attr in attributes.items() %}
-                    <option value="{{ key }}" {% if key == selected_attribute %}selected{% endif %}>
-                        {{ attr.label }}
-                    </option>
+            {% if selected_table and attributes[selected_table] %}
+                {% for attr_id, attr_info in attributes[selected_table].items() %}
+                    <option value="{{ attr_id }}" {% if attr_id == selected_attr1 %}selected{% endif %}>{{ attr_info.label }}</option>
                 {% endfor %}
             {% endif %}
         </select><br>
 
-        <label for="value">Значение:</label><br>
-        <select name="value" id="value">
+        <label for="first_value">Выберите значение:</label><br>
+        <select name="first_value" id="first_value" onchange="updateSecondAttributes()" required>
             <option value="">-- Выберите значение --</option>
-            {% if selected_attribute and value %}
-                <option value="{{ value }}" selected>{{ value }}</option>
-            {% endif %}
+        </select>
+        <button onclick="addRecord1()">Добавить</button>
+        <select name="table1" id="table1" onchange="updateAttributes2()">
+            <option value="">Выберите вторую таблицу (опционально):</option>
+            {% for table_id, table_name in tables.items() %}
+          <option value="{{ table_id }}">{{ table_name }}</option>
+            {% endfor %}
+        </select>
+        <label for="second_attribute">Выберите второй атрибут:</label><br>
+        <select name="second_attribute" id="second_attribute" onchange="updateSecondValues()">
+            <option value="">-- Выберите атрибут --</option>
         </select><br>
 
-        <button type="submit">Поиск</button>
+        <label for="second_value">Выберите значение:</label><br>
+        <select name="second_value" id="second_value">
+            <option value="">-- Выберите значение --</option>
+        </select>
+        <button onclick="addRecord2()">Добавить</button>
+        <button type="submit">Найти</button>
     </form>
 
+    <div id="add_form" style="display:none;">
+        <input type="text" id="new_value" placeholder="Новое значение">
+        <button onclick="addValue()">Сохранить</button>
+    </div>
+
     {% if results %}
-        <h2>Результаты</h2>
+        <h2>Результаты поиска</h2>
         <table>
             <tr>
-                <th>ID</th>
-                <th>Имя</th>
-                <th>Порода</th>
-                <th>Место размещения</th>
-                <th>Дата рождения</th>
-                <th>Дата регистрации</th>
-                <th>Номер микрочипа</th>
+                {% for column in results[0].keys() %}
+                    <th>{{ column }}</th>
+                {% endfor %}
             </tr>
-            {% for dog in results %}
-                <tr>
-                    <td>{{ dog.id }}</td>
-                    <td>{{ dog.name }}</td>
-                    <td>{{ dog.breed_name }}</td>
-                    <td>{{ dog.location_name }}</td>
-                    <td>{{ dog.birth_date }}</td>
-                    <td>{{ dog.registration_date }}</td>
-                    <td>{{ dog.microchip_number }}</td>
-                </tr>
+            {% for result in results %}
+            <tr>
+                {% for value in result %}
+                    <td>{{ value }}</td>
+                {% endfor %}
+            </tr>
             {% endfor %}
         </table>
     {% endif %}
+
+    <script src="{{ url_for('static', filename='script_sync.js') }}"></script>
+    <script>
+    function addRecord1() {
+      var table = document.getElementById('table').value;
+      if(table=='dogs'){
+        table='add';
+      }
+        window.location.href = '/' + table;
+      }
+     function addRecord2() {
+      var table = document.getElementById('table1').value;
+      if(table=='dogs'){
+        table='add';
+      }
+        window.location.href = '/' + table;
+    }
+</script>
 </body>
 </html>
