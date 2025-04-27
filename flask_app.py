@@ -562,6 +562,7 @@ def sync_queries():
                 main_table = 'dogs d'
                 joins = [
                     'LEFT JOIN breeds b ON d.breeds_id = b.id',
+                    'LEFT JOIN locations l ON d.location_id = l.id',
                     'LEFT JOIN vet_examinations ve ON d.vet_examinations_id = ve.id',
                     'LEFT JOIN getting g ON d.getting_id = g.id',
                     'LEFT JOIN coat_type ct ON d.coat_type = ct.id',

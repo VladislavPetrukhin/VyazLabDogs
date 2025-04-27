@@ -224,6 +224,21 @@
         {% endif %}
 
         <script>
+        const tables = {
+            'dogs': 'Собаки',
+            'breeds': 'Породы',
+            'locations': 'Места размещения',
+            'vet_examinations': 'Ветеринарные осмотры',
+            'getting': 'Получение приютом'
+        };
+
+        const tableRelationships = {
+            'dogs': ['breeds', 'locations', 'vet_examinations', 'getting'],
+            'breeds': ['dogs'],
+            'locations': ['dogs'],
+            'vet_examinations': ['dogs'],
+            'getting': ['dogs']
+        };
             let currentLevel = '';
 
             function updateAttributes() {
@@ -379,6 +394,24 @@
                     alert('Заполните все поля');
                 }
             }
+            function updateSecondTableOptions() {
+            const firstTable = document.getElementById("table").value;
+            const secondTableSelect = document.getElementById("table1");
+            secondTableSelect.innerHTML = '<option value="">-- Выберите таблицу --</option>';
+
+            if (firstTable && tableRelationships[firstTable]) {
+                tableRelationships[firstTable].forEach(tableId => {
+                    const option = document.createElement("option");
+                    option.value = tableId;
+                    option.text = tables[tableId];
+                    secondTableSelect.appendChild(option);
+                });
+                secondTableSelect.disabled = false;
+            } else {
+                secondTableSelect.disabled = true;
+            }
+        }
+        document.getElementById("table").addEventListener("change", updateSecondTableOptions);
         </script>
     </body>
 </html>
