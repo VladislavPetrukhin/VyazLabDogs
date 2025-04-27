@@ -1,118 +1,280 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Запросы синхронизированные</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-</head>
-<body>
-    <h1>Запросы синхронизированные</h1>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Запросы синхронизированные</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+        <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}" />
+    </head>
+    <body>
+        <h1>Запросы синхронизированные</h1>
         <nav>
-        <a href="/">Главная</a> |
-        <a href="/search">Поиск</a> |
-        <a href="/view">Собаки</a> |
-        <a href="/add">Добавить собаку</a> |
-        <a href="/add_detailed">Добавить собаку (подробно)</a> |
-        <a href="/breeds">Породы</a> |
-        <a href="/locations">Места размещения</a> |
-        <a href="/vet_examinations">Ветеринарные осмотры</a> |
-        <a href="/getting">Получение приютом</a> |
-        <a href="/stats">Статистика</a> |
-        <a href="/sync_queries">Запросы синхр.</a>
-    </nav>
+            <a href="/">Главная</a> | <a href="/search">Поиск</a> |
+            <a href="/view">Собаки</a> | <a href="/add">Добавить собаку</a> |
+            <a href="/add_detailed">Добавить собаку (подробно)</a> |
+            <a href="/breeds">Породы</a> |
+            <a href="/locations">Места размещения</a> |
+            <a href="/vet_examinations">Ветеринарные осмотры</a> |
+            <a href="/getting">Получение приютом</a> |
+            <a href="/stats">Статистика</a> |
+            <a href="/sync_queries">Запросы синхр.</a>
+        </nav>
 
-    {% if errors %}
+        {% if errors %}
         <ul class="errors">
             {% for error in errors %}
-                <li>{{ error }}</li>
+            <li>{{ error }}</li>
             {% endfor %}
         </ul>
-    {% endif %}
+        {% endif %}
 
-    <h2>Поиск по атрибутам</h2>
-    <form method="POST" id="searchForm">
-        <label for="table">Выберите таблицу:</label><br>
-        <select name="table" id="table" onchange="updateAttributes()" required>
-            <option value="">-- Выберите таблицу --</option>
-            {% for table_id, table_name in tables.items() %}
-                <option value="{{ table_id }}" {% if table_id == selected_table %}selected{% endif %}>{{ table_name }}</option>
-            {% endfor %}
-        </select><br>
-
-        <label for="first_attribute">Выберите первый атрибут:</label><br>
-        <select name="first_attribute" id="first_attribute" onchange="updateFirstValues()" required>
-            <option value="">-- Выберите атрибут --</option>
-            {% if selected_table and attributes[selected_table] %}
-                {% for attr_id, attr_info in attributes[selected_table].items() %}
-                    <option value="{{ attr_id }}" {% if attr_id == selected_attr1 %}selected{% endif %}>{{ attr_info.label }}</option>
+        <h2>Поиск по атрибутам</h2>
+        <form method="POST" id="searchForm">
+            <label for="table">Выберите таблицу:</label><br />
+            <select name="table" id="table" onchange="updateAttributes()">
+                <option value="">-- Выберите таблицу --</option>
+                {% for table_id, table_name in tables.items() %}
+                <option value="{{ table_id }}" {% if table_id == selected_table %}selected{% endif %}>
+                    {{ table_name }}
+                </option>
                 {% endfor %}
-            {% endif %}
-        </select><br>
+            </select><br />
 
-        <label for="first_value">Выберите значение:</label><br>
-        <select name="first_value" id="first_value" onchange="updateSecondAttributes()" required>
-            <option value="">-- Выберите значение --</option>
-        </select>
-        <button onclick="addRecord1()">Добавить</button>
-        <select name="table1" id="table1" onchange="updateAttributes2()">
-            <option value="">Выберите вторую таблицу (опционально):</option>
-            {% for table_id, table_name in tables.items() %}
-          <option value="{{ table_id }}">{{ table_name }}</option>
-            {% endfor %}
-        </select>
-        <label for="second_attribute">Выберите второй атрибут:</label><br>
-        <select name="second_attribute" id="second_attribute" onchange="updateSecondValues()">
-            <option value="">-- Выберите атрибут --</option>
-        </select><br>
+            <label for="first_attribute">Первый атрибут:</label><br />
+            <select name="first_attribute" id="first_attribute" onchange="updateFirstValues()">
+                <option value="">-- Выберите атрибут --</option>
+                {% if selected_table %}
+                {% for attr_id, attr_info in attributes[selected_table].items() %}
+                <option value="{{ attr_id }}" {% if attr_id == selected_attr1 %}selected{% endif %}>
+                    {{ attr_info.label }}
+                </option>
+                {% endfor %}
+                {% endif %}
+            </select><br />
 
-        <label for="second_value">Выберите значение:</label><br>
-        <select name="second_value" id="second_value">
-            <option value="">-- Выберите значение --</option>
-        </select>
-        <button onclick="addRecord2()">Добавить</button>
-        <button type="submit">Найти</button>
-    </form>
+            <label for="first_value">Значение:</label><br />
+            <select name="first_value" id="first_value" onchange="updateSecondValues()">
+                <option value="">-- Выберите значение --</option>
+                {% for value in values1 %}
+                <option value="{{ value }}" {% if value == selected_value1 %}selected{% endif %}>
+                    {{ value }}
+                </option>
+                {% endfor %}
+            </select><br />
 
-    <div id="add_form" style="display:none;">
-        <input type="text" id="new_value" placeholder="Новое значение">
-        <button onclick="addValue()">Сохранить</button>
-    </div>
+            <label for="table1">Вторая таблица (опционально):</label><br />
+            <select name="table1" id="table1" onchange="updateSecondAttributes()">
+                <option value="">-- Выберите таблицу --</option>
+                {% for table_id, table_name in tables.items() %}
+                <option value="{{ table_id }}" {% if table_id == selected_table1 %}selected{% endif %}>
+                    {{ table_name }}
+                </option>
+                {% endfor %}
+            </select><br />
 
-    {% if results %}
+            <label for="second_attribute">Второй атрибут:</label><br />
+            <select name="second_attribute" id="second_attribute" onchange="updateSecondValues()">
+                <option value="">-- Выберите атрибут --</option>
+                {% if selected_table1 %}
+                {% for attr_id, attr_info in attributes[selected_table1].items() %}
+                <option value="{{ attr_id }}" {% if attr_id == selected_attr2 %}selected{% endif %}>
+                    {{ attr_info.label }}
+                </option>
+                {% endfor %}
+                {% endif %}
+            </select><br />
+
+            <label for="second_value">Значение:</label><br />
+            <select name="second_value" id="second_value">
+                <option value="">-- Выберите значение --</option>
+                {% for value in values2 %}
+                <option value="{{ value }}" {% if value == selected_value2 %}selected{% endif %}>
+                    {{ value }}
+                </option>
+                {% endfor %}
+            </select><br />
+
+            <button type="submit">Найти</button>
+        </form>
+
+        {% if results %}
         <h2>Результаты поиска</h2>
         <table>
             <tr>
-                {% for column in results[0].keys() %}
-                    <th>{{ column }}</th>
-                {% endfor %}
+                <th>ID</th>
+                <th>Имя</th>
+                <th>Дата рождения</th>
+                <th>Дата регистрации</th>
+                <th>Номер микрочипа</th>
+                <th>Порода</th>
+                <th>Группа породы</th>
+                <th>Страна происхождения</th>
+                <th>Средняя продолжительность жизни</th>
+                <th>Типичное использование</th>
+                <th>Проблемы со здоровьем</th>
+                <th>Рекомендуемые вакцинации</th>
+                <th>Ветеринарный уход</th>
+                <th>Средний вес самцов</th>
+                <th>Средний вес самок</th>
+                <th>Уровень обучаемости</th>
+                <th>Возраст начала дрессировки</th>
+                <th>Поведенческие проблемы</th>
+                <th>Методы дрессировки</th>
+                <th>Период обучения</th>
+                <th>Место размещения</th>
+                <th>Тип места</th>
+                <th>Адрес</th>
+                <th>Контакты места</th>
+                <th>Стоимость</th>
+                <th>Количество собак</th>
+                <th>Сайт</th>
+                <th>Дата осмотра</th>
+                <th>Ветеринар</th>
+                <th>Диагноз</th>
+                <th>Лечение</th>
+                <th>Следующий осмотр</th>
+                <th>Кем передана</th>
+                <th>Контакты передачи</th>
+                <th>Тип передачи</th>
+                <th>Причина передачи</th>
+                <th>Тип шерсти</th>
+                <th>Окрас</th>
+                <th>Темперамент</th>
+                <th>Размер</th>
             </tr>
             {% for result in results %}
             <tr>
-                {% for value in result %}
-                    <td>{{ value }}</td>
-                {% endfor %}
+                <td>{{ result['id'] }}</td>
+                <td>{{ result['name'] }}</td>
+                <td>{{ result['birth_date'] }}</td>
+                <td>{{ result['registration_date'] }}</td>
+                <td>{{ result['microchip_number'] }}</td>
+                <td>{{ result['breed_name'] }}</td>
+                <td>{{ result['breed_group'] }}</td>
+                <td>{{ result['origin_country'] }}</td>
+                <td>{{ result['average_lifes'] }}</td>
+                <td>{{ result['typical_use'] }}</td>
+                <td>{{ result['common_health_issues'] }}</td>
+                <td>{{ result['recommended_vaccinations'] }}</td>
+                <td>{{ result['veterinary_care'] }}</td>
+                <td>{{ result['average_weight_male'] }}</td>
+                <td>{{ result['average_weight_female'] }}</td>
+                <td>{{ result['trainability_level'] }}</td>
+                <td>{{ result['recommended_training_age'] }}</td>
+                <td>{{ result['common_behavioral_issues'] }}</td>
+                <td>{{ result['preferred_training_methods'] }}</td>
+                <td>{{ result['typical_learning_period'] }}</td>
+                <td>{{ result['location_name'] }}</td>
+                <td>{{ result['location_type'] }}</td>
+                <td>{{ result['address'] }}</td>
+                <td>{{ result['location_contact_info'] }}</td>
+                <td>{{ result['price'] }}</td>
+                <td>{{ result['availability'] }}</td>
+                <td>{{ result['website'] }}</td>
+                <td>{{ result['examination_date'] }}</td>
+                <td>{{ result['veterinarian_name'] }}</td>
+                <td>{{ result['diagnosis'] }}</td>
+                <td>{{ result['treatment'] }}</td>
+                <td>{{ result['next_examination_date'] }}</td>
+                <td>{{ result['getting_by'] }}</td>
+                <td>{{ result['getting_contact_info'] }}</td>
+                <td>{{ result['getting_type'] }}</td>
+                <td>{{ result['reason'] }}</td>
+                <td>{{ result['coat_type_name'] }}</td>
+                <td>{{ result['color_variations_name'] }}</td>
+                <td>{{ result['temperament_name'] }}</td>
+                <td>{{ result['size_name'] }}</td>
             </tr>
             {% endfor %}
         </table>
-    {% endif %}
+        {% endif %}
 
-    <script src="{{ url_for('static', filename='script_sync.js') }}"></script>
-    <script>
-    function addRecord1() {
-      var table = document.getElementById('table').value;
-      if(table=='dogs'){
-        table='add';
-      }
-        window.location.href = '/' + table;
-      }
-     function addRecord2() {
-      var table = document.getElementById('table1').value;
-      if(table=='dogs'){
-        table='add';
-      }
-        window.location.href = '/' + table;
-    }
-</script>
-</body>
+        <script>
+            function updateAttributes() {
+                var table = document.getElementById("table").value;
+                if (table) {
+                    fetch("/get_attributes?table=" + table)
+                        .then((response) => response.json())
+                        .then((data) => {
+                            var select = document.getElementById("first_attribute");
+                            select.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+                            for (var key in data) {
+                                var option = document.createElement("option");
+                                option.value = key;
+                                option.text = data[key].label;
+                                select.appendChild(option);
+                            }
+                            updateFirstValues();
+                        });
+                }
+            }
+
+            function updateFirstValues() {
+                var table = document.getElementById("table").value;
+                var attr = document.getElementById("first_attribute").value;
+                if (table && attr) {
+                    fetch("/get_attribute_values?table=" + table + "&attribute=" + attr)
+                        .then((response) => response.json())
+                        .then((data) => {
+                            var select = document.getElementById("first_value");
+                            select.innerHTML = '<option value="">-- Выберите значение --</option>';
+                            data.forEach((value) => {
+                                var option = document.createElement("option");
+                                option.value = value;
+                                option.text = value;
+                                select.appendChild(option);
+                            });
+                        });
+                }
+            }
+
+            function updateSecondAttributes() {
+                var table = document.getElementById("table1").value;
+                if (table) {
+                    fetch("/get_attributes?table=" + table)
+                        .then((response) => response.json())
+                        .then((data) => {
+                            var select = document.getElementById("second_attribute");
+                            select.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+                            for (var key in data) {
+                                var option = document.createElement("option");
+                                option.value = key;
+                                option.text = data[key].label;
+                                select.appendChild(option);
+                            }
+                            updateSecondValues();
+                        });
+                }
+            }
+
+            function updateSecondValues() {
+                var table = document.getElementById("table").value;
+                var attr1 = document.getElementById("first_attribute").value;
+                var value1 = document.getElementById("first_value").value;
+                var table1 = document.getElementById("table1").value;
+                var attr2 = document.getElementById("second_attribute").value;
+
+                if (table && attr1 && value1 && attr2) {
+                    fetch("/get_second_values", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded",
+                        },
+                        body: `table=${table}&attr1=${attr1}&value1=${value1}&table1=${table1}&attr2=${attr2}`,
+                    })
+                        .then((response) => response.json())
+                        .then((data) => {
+                            var select = document.getElementById("second_value");
+                            select.innerHTML = '<option value="">-- Выберите значение --</option>';
+                            data.forEach((value) => {
+                                var option = document.createElement("option");
+                                option.value = value;
+                                option.text = value;
+                                select.appendChild(option);
+                            });
+                        });
+                }
+            }
+        </script>
+    </body>
 </html>

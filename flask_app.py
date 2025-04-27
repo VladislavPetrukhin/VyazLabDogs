@@ -130,7 +130,24 @@ def validate_data(data, rules):
 def index():
     return render_template('index.html')
 
+@app.route('/simple_query', methods=['GET', 'POST'])
+def simple_query():
+    with get_db_connection() as conn:
+        names = [row['name'] for row in conn.execute("SELECT DISTINCT name FROM dogs ORDER BY name").fetchall()]
 
+    selected_name = request.form.get('name') if request.method == 'POST' else None
+    dog_info = None
+    if selected_name:
+        with get_db_connection() as conn:
+            dog_info = conn.execute("""
+                SELECT d.*, b.breed_name, l.location_name
+                FROM dogs d
+                JOIN breeds b ON d.breeds_id = b.id
+                JOIN locations l ON d.location_id = l.id
+                WHERE d.name = ?
+            """, (selected_name,)).fetchone()
+
+    return render_template('simple_query.html', names=names, selected_name=selected_name, dog_info=dog_info)
 
 # Маршрут для получения атрибутов таблицы
 @app.route('/get_attributes')
@@ -236,7 +253,7 @@ def get_attribute_values():
             print(f"Table: {table}, Attribute: {attribute}, Values: {values}")  # Отладка
             return jsonify(values)
     return jsonify([])
-    
+
 # Маршрут для получения уникальных значений атрибута
 @app.route('/get_values')
 def get_values():
@@ -247,7 +264,7 @@ def get_values():
         query = f"SELECT DISTINCT {attribute} FROM {table} ORDER BY {attribute}"
         values = [row[attribute] for row in cursor.execute(query).fetchall()]
     return jsonify(values)
-    
+
 @app.route('/get_filtered_values', methods=['GET', 'POST'])
 def get_filtered_values():
     if request.method == 'POST':
@@ -266,7 +283,7 @@ def get_filtered_values():
             cursor = conn.cursor()
             if table1 == 'breeds' and table2 == 'dogs' and attr1 == 'id' and attr2 == 'name':
                 query = """
-                    SELECT DISTINCT d.name 
+                    SELECT DISTINCT d.name
                     FROM dogs d
                     JOIN breeds b ON d.breeds_id = b.id
                     WHERE b.id = ?
@@ -361,11 +378,259 @@ def add_value():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
-                
+
+
 # Маршрут для страницы "Запросы синхронизированные"
+# @app.route('/sync_queries', methods=['GET', 'POST'])
+# def sync_queries():
+#     # Инициализация переменных
+#     selected_table = None
+#     selected_attr1 = None
+#     selected_value1 = None
+#     selected_table1 = None
+#     selected_attr2 = None
+#     selected_value2 = None
+#     results = None
+#     errors = []
+#     values1 = []  # Инициализация по умолчанию
+#     values2 = []  # Инициализация по умолчанию
+
+#     # Список таблиц
+#     tables = {
+#         'dogs': 'Собаки',
+#         'breeds': 'Породы',
+#         'vet_examinations': 'Ветеринарные осмотры',
+#         'locations': 'Места размещения',
+#     }
+
+#     # Атрибуты для каждой таблицы
+#     attributes = {
+#         'dogs': {
+#             'name': {'type': 'text', 'label': 'Имя собаки'},
+#             'birth_date': {'type': 'date', 'label': 'Дата рождения'},
+#             'breeds_id': {'type': 'number', 'label': 'Порода', 'has_options': 'breed_name'},
+#             'getting_id': {'type': 'number', 'label': 'Получение', 'has_options': 'getting_by'},
+#             'vet_examinations_id': {'type': 'number', 'label': 'Ветеринарный осмотр', 'has_options': 'examination_date'},
+#             'location_id': {'type': 'number', 'label': 'Место размещения', 'has_options': 'location_name'},
+#             'registration_date': {'type': 'date', 'label': 'Дата регистрации'},
+#             'microchip_number': {'type': 'text', 'label': 'Номер микрочипа'},
+#             'coat_type': {'type': 'number', 'label': 'Тип шерсти', 'has_options': 'coat_type_name'},
+#             'color_variations': {'type': 'number', 'label': 'Окрас', 'has_options': 'color_variations_name'},
+#             'temperament': {'type': 'number', 'label': 'Темперамент', 'has_options': 'temperament_name'},
+#             'size': {'type': 'number', 'label': 'Размер', 'has_options': 'size_name'}
+#         },
+#         'breeds': {
+#             'breed_name': {'type': 'text', 'label': 'Название породы'},
+#             'breed_group': {'type': 'text', 'label': 'Группа породы'},
+#             'origin_country': {'type': 'text', 'label': 'Страна происхождения'},
+#             'average_lifes': {'type': 'number', 'label': 'Средняя продолжительность жизни'},
+#             'typical_use': {'type': 'text', 'label': 'Типичное использование'},
+#             'common_health_issues': {'type': 'text', 'label': 'Распространенные проблемы со здоровьем'},
+#             'recommended_vaccinations': {'type': 'text', 'label': 'Рекомендуемые вакцинации'},
+#             'veterinary_care': {'type': 'text', 'label': 'Потребности в ветеринарном уходе'},
+#             'average_weight_male': {'type': 'number', 'label': 'Средний вес самцов'},
+#             'average_weight_female': {'type': 'number', 'label': 'Средний вес самок'},
+#             'trainability_level': {'type': 'text', 'label': 'Уровень обучаемости'},
+#             'recommended_training_age': {'type': 'number', 'label': 'Рекомендуемый возраст начала дрессировки'},
+#             'common_behavioral_issues': {'type': 'text', 'label': 'Распространенные поведенческие проблемы'},
+#             'preferred_training_methods': {'type': 'text', 'label': 'Предпочтительные методы дрессировки'},
+#             'typical_learning_period': {'type': 'number', 'label': 'Типичный период обучения'}
+#         },
+#         'vet_examinations': {
+#             'dog_id': {'type': 'number', 'label': 'ID собаки'},
+#             'examination_date': {'type': 'date', 'label': 'Дата осмотра'},
+#             'veterinarian_name': {'type': 'text', 'label': 'Имя ветеринара'},
+#             'diagnosis': {'type': 'text', 'label': 'Диагноз'},
+#             'treatment': {'type': 'text', 'label': 'Лечение'},
+#             'next_examination_date': {'type': 'date', 'label': 'Дата следующего осмотра'}
+#         },
+#         'locations': {
+#             'location_name': {'type': 'text', 'label': 'Название места'},
+#             'location_type': {'type': 'text', 'label': 'Тип места'},
+#             'address': {'type': 'text', 'label': 'Адрес'},
+#             'contact_info': {'type': 'text', 'label': 'Контактная информация'},
+#             'price': {'type': 'number', 'label': 'Стоимость'},
+#             'availability': {'type': 'number', 'label': 'Количество собак'},
+#             'website': {'type': 'text', 'label': 'Сайт'}
+#         },
+#         'getting': {
+#             'getting_by': {'type': 'text', 'label': 'Кем передана'},
+#             'contact_info': {'type': 'text', 'label': 'Контактная информация'},
+#             'getting_type': {'type': 'text', 'label': 'Тип передачи'},
+#             'reason': {'type': 'text', 'label': 'Причина передачи'}
+#         }
+#     }
+
+#     if request.method == 'POST':
+#         selected_table = request.form.get('table')
+#         selected_table1 = request.form.get('table1')
+#         selected_attr1 = request.form.get('first_attribute')
+#         selected_value1 = request.form.get('first_value')
+#         selected_attr2 = request.form.get('second_attribute')
+#         selected_value2 = request.form.get('second_value')
+
+#         # Получаем атрибуты для выбранной таблицы
+#         attrs = attributes.get(selected_table, {}) if selected_table else {}
+#         attrs1 = attributes.get(selected_table1, {}) if selected_table1 else {}
+
+#         # Получаем уникальные значения для первого атрибута
+#         if selected_table and selected_attr1:
+#             with get_db_connection() as conn:
+#                 cursor = conn.cursor()
+#                 query = f"SELECT DISTINCT {selected_attr1} FROM {selected_table} ORDER BY {selected_attr1}"
+#                 values1 = [row[selected_attr1] for row in cursor.execute(query).fetchall()]
+
+#         # Получаем уникальные значения для второго атрибута с учетом первой таблицы и её значения
+#         if selected_table and selected_table1 and selected_attr2 and selected_value1:
+#             table_relationships = {
+#                 ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
+#                 ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+#                 ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
+#                 ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
+#                 ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
+#                 ('breeds', 'vet_examinations'): ('b', 've', 'JOIN dogs d ON d.breeds_id = b.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+#             }
+#             if (selected_table, selected_table1) in table_relationships:
+#                 alias0, alias1, join_condition = table_relationships[(selected_table, selected_table1)]
+#                 with get_db_connection() as conn:
+#                     cursor = conn.cursor()
+#                     query = f"""
+#                         SELECT DISTINCT {alias1}.{selected_attr2}
+#                         FROM {selected_table} {alias0}
+#                         {join_condition}
+#                         WHERE {alias0}.{selected_attr1} = ?
+#                         ORDER BY {alias1}.{selected_attr2}
+#                     """
+#                     try:
+#                         values2 = [row[selected_attr2] for row in cursor.execute(query, (selected_value1,)).fetchall()]
+#                     except sqlite3.OperationalError as e:
+#                         errors.append(f"Ошибка при получении значений второго атрибута: {str(e)}")
+#                         values2 = []
+#             else:
+#                 with get_db_connection() as conn:
+#                     cursor = conn.cursor()
+#                     query = f"SELECT DISTINCT {selected_attr2} FROM {selected_table} WHERE {selected_attr1} = ? ORDER BY {selected_attr2}"
+#                     try:
+#                         values2 = [row[selected_attr2] for row in cursor.execute(query, (selected_value1,)).fetchall()]
+#                     except sqlite3.OperationalError as e:
+#                         errors.append(f"Ошибка при получении значений второго атрибута: {str(e)}")
+#                         values2 = []
+
+#         # Валидация POST-запроса
+#         if not selected_table or selected_table not in tables:
+#             errors.append("Выберите первую таблицу")
+#         elif not selected_attr1 or selected_attr1 not in attrs:
+#             errors.append("Выберите первый атрибут")
+#         elif not selected_value1:
+#             errors.append("Выберите значение для первого атрибута")
+#         elif selected_attr2 and not selected_table1:
+#             errors.append("Выберите вторую таблицу, если выбран второй атрибут")
+#         elif selected_attr2 and selected_attr2 not in attrs1:
+#             errors.append("Выберите корректный второй атрибут")
+#         elif selected_attr2 and not selected_value2:
+#             errors.append("Выберите значение для второго атрибута")
+#         else:
+#             with get_db_connection() as conn:
+#                 cursor = conn.cursor()
+#                 # Словарь связей между таблицами
+#                 table_relationships = {
+#                     ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
+#                     ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+#                     ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
+#                     ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
+#                     ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
+#                     ('breeds', 'vet_examinations'): ('b', 've', 'JOIN dogs d ON d.breeds_id = b.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+#                 }
+
+#                 if selected_table1 and (selected_table, selected_table1) in table_relationships:
+#                     alias0, alias1, join_condition = table_relationships[(selected_table, selected_table1)]
+#                     query = f"""
+#                         SELECT {alias1}.*
+#                         FROM {selected_table} {alias0}
+#                         {join_condition}
+#                         WHERE {alias0}.{selected_attr1} = ?
+#                     """
+#                     params = [selected_value1]
+#                     if selected_attr2 and selected_value2:
+#                         query += f" AND {alias1}.{selected_attr2} = ?"
+#                         params.append(selected_value2)
+#                 else:
+#                     query = f"SELECT * FROM {selected_table} WHERE {selected_attr1} = ?"
+#                     params = [selected_value1]
+#                     if selected_attr2 and selected_value2:
+#                         query += f" AND {selected_attr2} = ?"
+#                         params.append(selected_value2)
+
+#                 try:
+#                     results = cursor.execute(query, params).fetchall()
+#                 except sqlite3.OperationalError as e:
+#                     errors.append(f"Ошибка базы данных: {str(e)}")
+
+#                 # Сброс переменных после обработки
+#                 selected_table = None
+#                 selected_attr1 = None
+#                 selected_value1 = None
+#                 selected_table1 = None
+#                 selected_attr2 = None
+#                 selected_value2 = None
+
+#     # Передача данных в шаблон
+#     return render_template('sync_queries.html', tables=tables, attributes=attributes, results=results, errors=errors,
+#                            selected_table=selected_table, selected_table1=selected_table1,
+#                            selected_attr1=selected_attr1, selected_value1=selected_value1,
+#                            selected_attr2=selected_attr2, selected_value2=selected_value2,
+#                            values1=values1, values2=values2)
+@app.route('/get_second_values', methods=['POST'])
+def get_second_values():
+    table = request.form['table']  # First table
+    attr1 = request.form['attr1']  # First attribute
+    value1 = request.form['value1']  # Value of first attribute
+    attr2 = request.form['attr2']  # Second attribute
+    table1 = request.form.get('table1')  # Second table (optional)
+
+    if not table1 or table1 == table:
+        table1 = table  # If second table is not provided or same as first, use the first table
+
+    table_relationships = {
+        ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
+        ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+        ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
+        ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
+        ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
+        ('breeds', 'vet_examinations'): ('b', 've', 'JOIN dogs d ON d.breeds_id = b.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+    }
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if table == table1:
+            # Same table case
+            query = f"SELECT DISTINCT {attr2} FROM {table} WHERE {attr1} = ? ORDER BY {attr2}"
+            values = [row[attr2] for row in cursor.execute(query, (value1,)).fetchall()]
+        elif (table, table1) in table_relationships:
+            # Different tables with defined relationship
+            alias0, alias1, join_condition = table_relationships[(table, table1)]
+            query = f"""
+                SELECT DISTINCT {alias1}.{attr2}
+                FROM {table} {alias0}
+                {join_condition}
+                WHERE {alias0}.{attr1} = ?
+                ORDER BY {alias1}.{attr2}
+            """
+            values = [row[attr2] for row in cursor.execute(query, (value1,)).fetchall()]
+        else:
+            return jsonify([])  # No relationship defined
+
+        return jsonify([str(value) for value in values if value is not None])
 @app.route('/sync_queries', methods=['GET', 'POST'])
 def sync_queries():
-    # Инициализация переменных
+    tables = {
+        'dogs': 'Собаки',
+        'breeds': 'Породы',
+        'vet_examinations': 'Ветеринарные осмотры',
+        'locations': 'Места размещения',
+    }
+    attributes = TABLES
+
     selected_table = None
     selected_attr1 = None
     selected_value1 = None
@@ -374,194 +639,72 @@ def sync_queries():
     selected_value2 = None
     results = None
     errors = []
-    values1 = []  # Инициализация по умолчанию
-    values2 = []  # Инициализация по умолчанию
-
-    # Список таблиц
-    tables = {
-        'dogs': 'Собаки',
-        'breeds': 'Породы',
-        'vet_examinations': 'Ветеринарные осмотры',
-        'locations': 'Места размещения',
-    }
-
-    # Атрибуты для каждой таблицы
-    attributes = {
-        'dogs': {
-            'name': {'type': 'text', 'label': 'Имя собаки'},
-            'birth_date': {'type': 'date', 'label': 'Дата рождения'},
-            'breeds_id': {'type': 'number', 'label': 'Порода', 'has_options': 'breed_name'},
-            'getting_id': {'type': 'number', 'label': 'Получение', 'has_options': 'getting_by'},
-            'vet_examinations_id': {'type': 'number', 'label': 'Ветеринарный осмотр', 'has_options': 'examination_date'},
-            'location_id': {'type': 'number', 'label': 'Место размещения', 'has_options': 'location_name'},
-            'registration_date': {'type': 'date', 'label': 'Дата регистрации'},
-            'microchip_number': {'type': 'text', 'label': 'Номер микрочипа'},
-            'coat_type': {'type': 'number', 'label': 'Тип шерсти', 'has_options': 'coat_type_name'},
-            'color_variations': {'type': 'number', 'label': 'Окрас', 'has_options': 'color_variations_name'},
-            'temperament': {'type': 'number', 'label': 'Темперамент', 'has_options': 'temperament_name'},
-            'size': {'type': 'number', 'label': 'Размер', 'has_options': 'size_name'}
-        },
-        'breeds': {
-            'breed_name': {'type': 'text', 'label': 'Название породы'},
-            'breed_group': {'type': 'text', 'label': 'Группа породы'},
-            'origin_country': {'type': 'text', 'label': 'Страна происхождения'},
-            'average_lifes': {'type': 'number', 'label': 'Средняя продолжительность жизни'},
-            'typical_use': {'type': 'text', 'label': 'Типичное использование'},
-            'common_health_issues': {'type': 'text', 'label': 'Распространенные проблемы со здоровьем'},
-            'recommended_vaccinations': {'type': 'text', 'label': 'Рекомендуемые вакцинации'},
-            'veterinary_care': {'type': 'text', 'label': 'Потребности в ветеринарном уходе'},
-            'average_weight_male': {'type': 'number', 'label': 'Средний вес самцов'},
-            'average_weight_female': {'type': 'number', 'label': 'Средний вес самок'},
-            'trainability_level': {'type': 'text', 'label': 'Уровень обучаемости'},
-            'recommended_training_age': {'type': 'number', 'label': 'Рекомендуемый возраст начала дрессировки'},
-            'common_behavioral_issues': {'type': 'text', 'label': 'Распространенные поведенческие проблемы'},
-            'preferred_training_methods': {'type': 'text', 'label': 'Предпочтительные методы дрессировки'},
-            'typical_learning_period': {'type': 'number', 'label': 'Типичный период обучения'}
-        },
-        'vet_examinations': {
-            'dog_id': {'type': 'number', 'label': 'ID собаки'},
-            'examination_date': {'type': 'date', 'label': 'Дата осмотра'},
-            'veterinarian_name': {'type': 'text', 'label': 'Имя ветеринара'},
-            'diagnosis': {'type': 'text', 'label': 'Диагноз'},
-            'treatment': {'type': 'text', 'label': 'Лечение'},
-            'next_examination_date': {'type': 'date', 'label': 'Дата следующего осмотра'}
-        },
-        'locations': {
-            'location_name': {'type': 'text', 'label': 'Название места'},
-            'location_type': {'type': 'text', 'label': 'Тип места'},
-            'address': {'type': 'text', 'label': 'Адрес'},
-            'contact_info': {'type': 'text', 'label': 'Контактная информация'},
-            'price': {'type': 'number', 'label': 'Стоимость'},
-            'availability': {'type': 'number', 'label': 'Количество собак'},
-            'website': {'type': 'text', 'label': 'Сайт'}
-        },
-        'getting': {
-            'getting_by': {'type': 'text', 'label': 'Кем передана'},
-            'contact_info': {'type': 'text', 'label': 'Контактная информация'},
-            'getting_type': {'type': 'text', 'label': 'Тип передачи'},
-            'reason': {'type': 'text', 'label': 'Причина передачи'}
-        }
-    }
+    values1 = []
+    values2 = []
 
     if request.method == 'POST':
         selected_table = request.form.get('table')
-        selected_table1 = request.form.get('table1')
         selected_attr1 = request.form.get('first_attribute')
         selected_value1 = request.form.get('first_value')
+        selected_table1 = request.form.get('table1')
         selected_attr2 = request.form.get('second_attribute')
         selected_value2 = request.form.get('second_value')
 
-        # Получаем атрибуты для выбранной таблицы
-        attrs = attributes.get(selected_table, {}) if selected_table else {}
-        attrs1 = attributes.get(selected_table1, {}) if selected_table1 else {}
-
-        # Получаем уникальные значения для первого атрибута
         if selected_table and selected_attr1:
             with get_db_connection() as conn:
-                cursor = conn.cursor()
-                query = f"SELECT DISTINCT {selected_attr1} FROM {selected_table} ORDER BY {selected_attr1}"
-                values1 = [row[selected_attr1] for row in cursor.execute(query).fetchall()]
+                query = f"SELECT DISTINCT {selected_attr1} FROM {selected_table} WHERE {selected_attr1} IS NOT NULL ORDER BY {selected_attr1}"
+                values1 = [row[selected_attr1] for row in conn.execute(query).fetchall()]
 
-        # Получаем уникальные значения для второго атрибута с учетом первой таблицы и её значения
-        if selected_table and selected_table1 and selected_attr2 and selected_value1:
-            table_relationships = {
-                ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
-                ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
-                ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
-                ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
-                ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
-                ('breeds', 'vet_examinations'): ('b', 've', 'JOIN dogs d ON d.breeds_id = b.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
-            }
-            if (selected_table, selected_table1) in table_relationships:
-                alias0, alias1, join_condition = table_relationships[(selected_table, selected_table1)]
-                with get_db_connection() as conn:
-                    cursor = conn.cursor()
-                    query = f"""
-                        SELECT DISTINCT {alias1}.{selected_attr2}
-                        FROM {selected_table} {alias0}
-                        {join_condition}
-                        WHERE {alias0}.{selected_attr1} = ?
-                        ORDER BY {alias1}.{selected_attr2}
-                    """
-                    try:
-                        values2 = [row[selected_attr2] for row in cursor.execute(query, (selected_value1,)).fetchall()]
-                    except sqlite3.OperationalError as e:
-                        errors.append(f"Ошибка при получении значений второго атрибута: {str(e)}")
-                        values2 = []
-            else:
-                with get_db_connection() as conn:
-                    cursor = conn.cursor()
-                    query = f"SELECT DISTINCT {selected_attr2} FROM {selected_table} WHERE {selected_attr1} = ? ORDER BY {selected_attr2}"
-                    try:
-                        values2 = [row[selected_attr2] for row in cursor.execute(query, (selected_value1,)).fetchall()]
-                    except sqlite3.OperationalError as e:
-                        errors.append(f"Ошибка при получении значений второго атрибута: {str(e)}")
-                        values2 = []
-
-        # Валидация POST-запроса
         if not selected_table or selected_table not in tables:
             errors.append("Выберите первую таблицу")
-        elif not selected_attr1 or selected_attr1 not in attrs:
+        elif not selected_attr1 or selected_attr1 not in attributes[selected_table]:
             errors.append("Выберите первый атрибут")
         elif not selected_value1:
             errors.append("Выберите значение для первого атрибута")
         elif selected_attr2 and not selected_table1:
             errors.append("Выберите вторую таблицу, если выбран второй атрибут")
-        elif selected_attr2 and selected_attr2 not in attrs1:
+        elif selected_attr2 and selected_attr2 not in attributes.get(selected_table1, {}):
             errors.append("Выберите корректный второй атрибут")
         elif selected_attr2 and not selected_value2:
             errors.append("Выберите значение для второго атрибута")
         else:
             with get_db_connection() as conn:
-                cursor = conn.cursor()
-                # Словарь связей между таблицами
-                table_relationships = {
-                    ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
-                    ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
-                    ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
-                    ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
-                    ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
-                    ('breeds', 'vet_examinations'): ('b', 've', 'JOIN dogs d ON d.breeds_id = b.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
-                }
+                query = """
+                    SELECT 
+                        d.id, d.name, d.birth_date, d.registration_date, d.microchip_number,
+                        b.breed_name, b.breed_group, b.origin_country, b.average_lifes, b.typical_use,
+                        b.common_health_issues, b.recommended_vaccinations, b.veterinary_care,
+                        b.average_weight_male, b.average_weight_female, b.trainability_level,
+                        b.recommended_training_age, b.common_behavioral_issues, b.preferred_training_methods,
+                        b.typical_learning_period,
+                        l.location_name, l.location_type, l.address, l.contact_info AS location_contact_info,
+                        l.price, l.availability, l.website,
+                        ve.examination_date, ve.veterinarian_name, ve.diagnosis, ve.treatment, ve.next_examination_date,
+                        g.getting_by, g.contact_info AS getting_contact_info, g.getting_type, g.reason,
+                        ct.coat_type_name, cv.color_variations_name, t.temperament_name, s.size_name
+                    FROM dogs d
+                    LEFT JOIN breeds b ON d.breeds_id = b.id
+                    LEFT JOIN locations l ON d.location_id = l.id
+                    LEFT JOIN vet_examinations ve ON d.vet_examinations_id = ve.id
+                    LEFT JOIN getting g ON d.getting_id = g.id
+                    LEFT JOIN coat_type ct ON d.coat_type = ct.id
+                    LEFT JOIN color_variations cv ON d.color_variations = cv.id
+                    LEFT JOIN temperament t ON d.temperament = t.id
+                    LEFT JOIN size s ON d.size = s.id
+                    WHERE b.{attr1} = ?
+                """.format(attr1=selected_attr1)
+                params = [selected_value1]
+                if selected_attr2 and selected_value2:
+                    query += f" AND d.{selected_attr2} = ?"
+                    params.append(selected_value2)
+                results = conn.execute(query, params).fetchall()
 
-                if selected_table1 and (selected_table, selected_table1) in table_relationships:
-                    alias0, alias1, join_condition = table_relationships[(selected_table, selected_table1)]
-                    query = f"""
-                        SELECT {alias1}.*
-                        FROM {selected_table} {alias0}
-                        {join_condition}
-                        WHERE {alias0}.{selected_attr1} = ?
-                    """
-                    params = [selected_value1]
-                    if selected_attr2 and selected_value2:
-                        query += f" AND {alias1}.{selected_attr2} = ?"
-                        params.append(selected_value2)
-                else:
-                    query = f"SELECT * FROM {selected_table} WHERE {selected_attr1} = ?"
-                    params = [selected_value1]
-                    if selected_attr2 and selected_value2:
-                        query += f" AND {selected_attr2} = ?"
-                        params.append(selected_value2)
-
-                try:
-                    results = cursor.execute(query, params).fetchall()
-                except sqlite3.OperationalError as e:
-                    errors.append(f"Ошибка базы данных: {str(e)}")
-
-                # Сброс переменных после обработки
-                selected_table = None
-                selected_attr1 = None
-                selected_value1 = None
-                selected_table1 = None
-                selected_attr2 = None
-                selected_value2 = None
-
-    # Передача данных в шаблон
     return render_template('sync_queries.html', tables=tables, attributes=attributes, results=results, errors=errors,
                            selected_table=selected_table, selected_table1=selected_table1,
                            selected_attr1=selected_attr1, selected_value1=selected_value1,
                            selected_attr2=selected_attr2, selected_value2=selected_value2,
                            values1=values1, values2=values2)
+
 @app.route('/add_breed', methods=['POST'])
 def add_breed():
     data = request.get_json()
@@ -573,9 +716,21 @@ def add_breed():
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO breeds (breed_name) VALUES (?)", (breed_name,))
+        cursor.execute("""
+            INSERT INTO breeds (breed_name, breed_group, origin_country, average_lifes, typical_use,
+                                common_health_issues, recommended_vaccinations, veterinary_care,
+                                average_weight_male, average_weight_female, trainability_level,
+                                recommended_training_age, common_behavioral_issues, preferred_training_methods,
+                                typical_learning_period)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (breed_name, data.get('breed_group'), data.get('origin_country'), data.get('average_lifes'),
+              data.get('typical_use'), data.get('common_health_issues'), data.get('recommended_vaccinations'),
+              data.get('veterinary_care'), data.get('average_weight_male'), data.get('average_weight_female'),
+              data.get('trainability_level'), data.get('recommended_training_age'), data.get('common_behavioral_issues'),
+              data.get('preferred_training_methods'), data.get('typical_learning_period')))
         conn.commit()
-    return jsonify({'success': True})
+        breed_id = cursor.lastrowid
+    return jsonify({'success': True, 'id': breed_id, 'breed_name': breed_name})
 
 @app.route('/add_location', methods=['POST'])
 def add_location():
@@ -588,166 +743,93 @@ def add_location():
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO locations (location_name) VALUES (?)", (location_name,))
+        cursor.execute("""
+            INSERT INTO locations (location_name, location_type, address, contact_info, price, availability, website)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (location_name, data.get('location_type'), data.get('address'), data.get('contact_info'),
+              data.get('price'), data.get('availability'), data.get('website')))
         conn.commit()
-    return jsonify({'success': True})
+        location_id = cursor.lastrowid
+    return jsonify({'success': True, 'id': location_id, 'location_name': location_name})
 
+@app.route('/add_getting', methods=['POST'])
+def add_getting():
+    data = request.get_json()
+    getting_by = data.get('getting_by', '').strip()
+    if not getting_by:
+        return jsonify({'success': False, 'error': 'Кем передана не указано'})
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO getting (getting_by, contact_info, getting_type, reason)
+            VALUES (?, ?, ?, ?)
+        """, (getting_by, data.get('contact_info'), data.get('getting_type'), data.get('reason')))
+        conn.commit()
+        getting_id = cursor.lastrowid
+    return jsonify({'success': True, 'id': getting_id, 'getting_by': getting_by})
+
+@app.route('/add_vet_examination', methods=['POST'])
+def add_vet_examination():
+    data = request.get_json()
+    examination_date = data.get('examination_date', '').strip()
+    if not examination_date:
+        return jsonify({'success': False, 'error': 'Дата осмотра не указана'})
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO vet_examinations (examination_date, veterinarian_name, diagnosis, treatment, next_examination_date)
+            VALUES (?, ?, ?, ?, ?)
+        """, (examination_date, data.get('veterinarian_name'), data.get('diagnosis'), data.get('treatment'),
+              data.get('next_examination_date')))
+        conn.commit()
+        vet_id = cursor.lastrowid
+    return jsonify({'success': True, 'id': vet_id, 'examination_date': examination_date})
 @app.route('/add_detailed', methods=['GET', 'POST'])
 def add_detailed():
     errors = []
-
-    # Получаем данные для выпадающих списков
     with get_db_connection() as conn:
+        breeds = conn.execute("SELECT id, breed_name FROM breeds ORDER BY breed_name").fetchall()
+        locations = conn.execute("SELECT id, location_name FROM locations ORDER BY location_name").fetchall()
         coat_types = conn.execute("SELECT id, coat_type_name FROM coat_type ORDER BY coat_type_name").fetchall()
         color_variations = conn.execute("SELECT id, color_variations_name FROM color_variations ORDER BY color_variations_name").fetchall()
         temperaments = conn.execute("SELECT id, temperament_name FROM temperament ORDER BY temperament_name").fetchall()
         sizes = conn.execute("SELECT id, size_name FROM size ORDER BY size_name").fetchall()
+        gettings = conn.execute("SELECT id, getting_by FROM getting ORDER BY getting_by").fetchall()
+        vet_examinations = conn.execute("SELECT id, examination_date FROM vet_examinations ORDER BY examination_date").fetchall()
 
     if request.method == 'POST':
-        # Собираем данные из формы
         dog_data = {
             'name': request.form['name'],
             'birth_date': request.form['birth_date'] or None,
             'registration_date': request.form['registration_date'] or None,
-            'microchip_number': request.form['microchip_number'] or None
+            'microchip_number': request.form['microchip_number'] or None,
+            'breeds_id': request.form['breeds_id'],
+            'location_id': request.form['location_id'],
+            'coat_type': request.form['coat_type'] or None,
+            'color_variations': request.form['color_variations'] or None,
+            'temperament': request.form['temperament'] or None,
+            'size': request.form['size'] or None,
+            'getting_id': request.form['getting_id'] or None,
+            'vet_examinations_id': request.form['vet_examinations_id'] or None
         }
-
-        breed_data = {
-            'breed_name': request.form['breed_name'],
-            'breed_group': request.form['breed_group'] or None,
-            'origin_country': request.form['origin_country'] or None,
-            'average_lifes': request.form['average_lifes'] or None,
-            'typical_use': request.form['typical_use'] or None,
-            'common_health_issues': request.form['common_health_issues'] or None,
-            'recommended_vaccinations': request.form['recommended_vaccinations'] or None,
-            'veterinary_care': request.form['veterinary_care'] or None,
-            'average_weight_male': request.form['average_weight_male'] or None,
-            'average_weight_female': request.form['average_weight_female'] or None,
-            'trainability_level': request.form['trainability_level'] or None,
-            'recommended_training_age': request.form['recommended_training_age'] or None,
-            'common_behavioral_issues': request.form['common_behavioral_issues'] or None,
-            'preferred_training_methods': request.form['preferred_training_methods'] or None,
-            'typical_learning_period': request.form['typical_learning_period'] or None
-        }
-
-        location_data = {
-            'location_name': request.form['location_name'],
-            'location_type': request.form['location_type'] or None,
-            'address': request.form['address'] or None,
-            'contact_info': request.form['location_contact_info'] or None,
-            'price': request.form['price'] or None,
-            'availability': request.form['availability'] or None,
-            'website': request.form['website'] or None
-        }
-
-        getting_data = {
-            'getting_by': request.form['getting_by'] or None,
-            'contact_info': request.form['getting_contact_info'] or None,
-            'getting_type': request.form['getting_type'] or None,
-            'reason': request.form['reason'] or None
-        }
-
-        vet_examination_data = {
-            'examination_date': request.form['examination_date'] or None,
-            'veterinarian_name': request.form['veterinarian_name'] or None,
-            'diagnosis': request.form['diagnosis'] or None,
-            'treatment': request.form['treatment'] or None,
-            'next_examination_date': request.form['next_examination_date'] or None
-        }
-
-        # Данные для выпадающих списков (ID)
-        coat_type_id = request.form['coat_type'] or None
-        color_variations_id = request.form['color_variations'] or None
-        temperament_id = request.form['temperament'] or None
-        size_id = request.form['size'] or None
-
-        # Валидация данных
-        errors.extend(validate_data(dog_data, VALIDATION_RULES['dogs']))
-        errors.extend(validate_data(breed_data, VALIDATION_RULES['breeds']))
-        errors.extend(validate_data(location_data, VALIDATION_RULES['locations']))
-        errors.extend(validate_data(getting_data, VALIDATION_RULES['getting']))
-        errors.extend(validate_data(vet_examination_data, VALIDATION_RULES['vet_examinations']))
-
-        # Дополнительная валидация обязательных полей
-        if not dog_data['name']:
-            errors.append("Кличка собаки обязательна")
-        if not breed_data['breed_name']:
-            errors.append("Название породы обязательно")
-        if not location_data['location_name']:
-            errors.append("Название места размещения обязательно")
-
+        errors = validate_data(dog_data, VALIDATION_RULES['dogs'])
         if not errors:
             with get_db_connection() as conn:
                 cursor = conn.cursor()
-
-                # Добавление породы
-                cursor.execute("""
-                    INSERT INTO breeds (breed_name, breed_group, origin_country, average_lifes, typical_use,
-                                        common_health_issues, recommended_vaccinations, veterinary_care,
-                                        average_weight_male, average_weight_female, trainability_level,
-                                        recommended_training_age, common_behavioral_issues, preferred_training_methods,
-                                        typical_learning_period)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (breed_data['breed_name'], breed_data['breed_group'], breed_data['origin_country'],
-                      breed_data['average_lifes'], breed_data['typical_use'], breed_data['common_health_issues'],
-                      breed_data['recommended_vaccinations'], breed_data['veterinary_care'],
-                      breed_data['average_weight_male'], breed_data['average_weight_female'],
-                      breed_data['trainability_level'], breed_data['recommended_training_age'],
-                      breed_data['common_behavioral_issues'], breed_data['preferred_training_methods'],
-                      breed_data['typical_learning_period']))
-                breed_id = cursor.lastrowid
-
-                # Добавление места размещения
-                cursor.execute("""
-                    INSERT INTO locations (location_name, location_type, address, contact_info, price, availability, website)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (location_data['location_name'], location_data['location_type'], location_data['address'],
-                      location_data['contact_info'], location_data['price'], location_data['availability'],
-                      location_data['website']))
-                location_id = cursor.lastrowid
-
-                # Добавление записи о получении
-                getting_id = None
-                if getting_data['getting_by']:
-                    cursor.execute("""
-                        INSERT INTO getting (getting_by, contact_info, getting_type, reason)
-                        VALUES (?, ?, ?, ?)
-                    """, (getting_data['getting_by'], getting_data['contact_info'], getting_data['getting_type'],
-                          getting_data['reason']))
-                    getting_id = cursor.lastrowid
-
-                # Добавление собаки
                 cursor.execute("""
                     INSERT INTO dogs (name, birth_date, registration_date, microchip_number, breeds_id, location_id,
-                                      coat_type, color_variations, temperament, size, getting_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                      coat_type, color_variations, temperament, size, getting_id, vet_examinations_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (dog_data['name'], dog_data['birth_date'], dog_data['registration_date'],
-                      dog_data['microchip_number'], breed_id, location_id, coat_type_id, color_variations_id,
-                      temperament_id, size_id, getting_id))
-                dog_id = cursor.lastrowid
-
-                # Добавление ветеринарного осмотра
-                vet_examination_id = None
-                if vet_examination_data['examination_date']:
-                    cursor.execute("""
-                        INSERT INTO vet_examinations (dog_id, examination_date, veterinarian_name, diagnosis, treatment,
-                                                      next_examination_date)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    """, (dog_id, vet_examination_data['examination_date'], vet_examination_data['veterinarian_name'],
-                          vet_examination_data['diagnosis'], vet_examination_data['treatment'],
-                          vet_examination_data['next_examination_date']))
-                    vet_examination_id = cursor.lastrowid
-
-                # Обновление собаки с vet_examinations_id
-                if vet_examination_id:
-                    cursor.execute("UPDATE dogs SET vet_examinations_id = ? WHERE id = ?",
-                                  (vet_examination_id, dog_id))
-
+                      dog_data['microchip_number'], dog_data['breeds_id'], dog_data['location_id'],
+                      dog_data['coat_type'], dog_data['color_variations'], dog_data['temperament'],
+                      dog_data['size'], dog_data['getting_id'], dog_data['vet_examinations_id']))
                 conn.commit()
             return redirect(url_for('view'))
 
-    return render_template('add_detailed.html', errors=errors, coat_types=coat_types,
-                           color_variations=color_variations, temperaments=temperaments, sizes=sizes)
+    return render_template('add_detailed.html', errors=errors, breeds=breeds, locations=locations,
+                           coat_types=coat_types, color_variations=color_variations, temperaments=temperaments,
+                           sizes=sizes, gettings=gettings, vet_examinations=vet_examinations)
 
 # Просмотр собак
 @app.route('/view')
@@ -815,8 +897,8 @@ def search():
             if not results:
                 no_results = True
 
-    return render_template('search.html', results=results, name=name, 
-                           breed_name=breed_name, location_name=location_name, 
+    return render_template('search.html', results=results, name=name,
+                           breed_name=breed_name, location_name=location_name,
                            no_results=no_results, breeds=breeds, locations=locations)
 
 
@@ -837,7 +919,7 @@ def edit_vet_examination(id):
         if not errors:
             with get_db_connection() as conn:
                 conn.execute("""
-                    UPDATE vet_examinations 
+                    UPDATE vet_examinations
                     SET dog_id = ?, examination_date = ?, diagnosis = ?, treatment = ?
                     WHERE id = ?
                 """, (data['dog_id'], data['examination_date'], data['diagnosis'], data['treatment'], id))
@@ -852,7 +934,7 @@ def edit_vet_examination(id):
 def add():
     errors = []
     dogs = None
-    
+
     with get_db_connection() as conn:
         breeds = conn.execute("SELECT id, breed_name FROM breeds ORDER BY breed_name").fetchall()
         locations = conn.execute("SELECT id, location_name FROM locations ORDER BY location_name").fetchall()
@@ -860,16 +942,13 @@ def add():
         color_variations = conn.execute("SELECT id, color_variations_name FROM color_variations ORDER BY color_variations_name").fetchall()
         temperaments = conn.execute("SELECT id, temperament_name FROM temperament ORDER BY temperament_name").fetchall()
         sizes = conn.execute("SELECT id, size_name FROM size ORDER BY size_name").fetchall()
-        gettings = conn.execute(
-            "SELECT id, getting_by FROM getting WHERE getting_by IS NOT NULL AND TRIM(getting_by) != '' ORDER BY getting_by").fetchall()
-        for getting in gettings:
-            print(f"ID: {getting['id']}, Getting_by: '{getting['getting_by']}'")
+        gettings = conn.execute("SELECT id, getting_by FROM getting WHERE getting_by IS NOT NULL ORDER BY getting_by").fetchall()
         vet_examinations = conn.execute("SELECT id, examination_date FROM vet_examinations ORDER BY examination_date").fetchall()
 
     if request.method == 'POST':
         data = {
             'name': request.form['name'],
-            'breed_id': request.form['breed_id'],
+            'breeds_id': request.form['breeds_id'],
             'location_id': request.form['location_id'] or None,
             'birth_date': request.form['birth_date'] or None,
             'registration_date': request.form['registration_date'] or None,
@@ -881,38 +960,30 @@ def add():
             'getting_id': request.form['getting_id'] or None,
             'vet_examinations_id': request.form['vet_examinations_id'] or None
         }
-        
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO dogs (name, breeds_id, location_id, birth_date, registration_date, microchip_number, coat_type, color_variations, temperament, size, getting_id, vet_examinations_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (data['name'], data['breed_id'], data['location_id'], data['birth_date'], data['registration_date'], 
-                  data['microchip_number'], data['coat_type'], data['color_variations'], data['temperament'], 
-                  data['size'], data['getting_id'], data['vet_examinations_id']))
-            conn.commit()
-            
-            cursor.execute("SELECT dogs.id, dogs.name, breeds.breed_name, locations.location_name FROM dogs LEFT JOIN breeds ON dogs.breeds_id = breeds.id LEFT JOIN locations ON dogs.location_id = locations.id")
-            dogs = cursor.fetchall()
-            breeds = cursor.execute("SELECT id, breed_name FROM breeds").fetchall()
-            locations = cursor.execute("SELECT id, location_name FROM locations").fetchall()
-    else:
-        with get_db_connection() as conn:
-            dogs = conn.execute("""
-                SELECT d.id, d.name, b.breed_name, l.location_name, d.birth_date, d.registration_date, d.microchip_number,
-                       ct.coat_type_name, cv.color_variations_name, t.temperament_name, s.size_name, 
-                       g.getting_by, ve.examination_date
-                FROM dogs d
-                LEFT JOIN breeds b ON d.breeds_id = b.id
-                LEFT JOIN locations l ON d.location_id = l.id
-                LEFT JOIN coat_type ct ON d.coat_type = ct.id
-                LEFT JOIN color_variations cv ON d.color_variations = cv.id
-                LEFT JOIN temperament t ON d.temperament = t.id
-                LEFT JOIN size s ON d.size = s.id
-                LEFT JOIN getting g ON d.getting_id = g.id
-                LEFT JOIN vet_examinations ve ON d.vet_examinations_id = ve.id
-                ORDER BY d.id
-            """).fetchall()
+
+        errors = validate_data(data, VALIDATION_RULES['dogs'])
+        if not errors:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO dogs (name, breeds_id, location_id, birth_date, registration_date, microchip_number,
+                                      coat_type, color_variations, temperament, size, getting_id, vet_examinations_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (data['name'], data['breeds_id'], data['location_id'], data['birth_date'],
+                      data['registration_date'], data['microchip_number'], data['coat_type'],
+                      data['color_variations'], data['temperament'], data['size'], data['getting_id'],
+                      data['vet_examinations_id']))
+                conn.commit()
+            return redirect(url_for('view'))
+
+    with get_db_connection() as conn:
+        dogs = conn.execute("""
+            SELECT d.id, d.name, b.breed_name, l.location_name
+            FROM dogs d
+            LEFT JOIN breeds b ON d.breeds_id = b.id
+            LEFT JOIN locations l ON d.location_id = l.id
+            ORDER BY d.id
+        """).fetchall()
 
     return render_template('add.html', errors=errors, dogs=dogs, breeds=breeds, locations=locations,
                            coat_types=coat_types, color_variations=color_variations, temperaments=temperaments,
@@ -936,18 +1007,18 @@ def edit(id):
             with get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    UPDATE dogs 
+                    UPDATE dogs
                     SET name = ?, birth_date = ?, microchip_number = ?, registration_date = ?, breeds_id = ?, location_id = ?
                     WHERE id = ?
-                """, (dog_data['name'], dog_data['birth_date'], dog_data['microchip_number'], 
+                """, (dog_data['name'], dog_data['birth_date'], dog_data['microchip_number'],
                       dog_data['registration_date'], breeds_id, location_id, id))
                 conn.commit()
             return redirect(url_for('view'))
-    
+
     with get_db_connection() as conn:
         dog = conn.execute("""
             SELECT d.*, b.breed_name, l.location_name
-            FROM dogs d 
+            FROM dogs d
             JOIN breeds b ON d.breeds_id = b.id
             JOIN locations l ON d.location_id = l.id
             WHERE d.id = ?
@@ -1077,7 +1148,7 @@ def getting():
         """).fetchall()
 
     return render_template('getting.html', gettings=gettings, dogs=dogs, errors=errors)
-  
+
 @app.route('/edit_getting/<int:id>', methods=['GET', 'POST'])
 def edit_getting(id):
     errors = []
@@ -1097,7 +1168,7 @@ def edit_getting(id):
             with get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    UPDATE getting 
+                    UPDATE getting
                     SET getting_by = ?, contact_info = ?, getting_type = ?, reason = ?
                     WHERE id = ?
                 """, (data['getting_by'], data['contact_info'], data['getting_type'], data['reason'], id))
@@ -1108,28 +1179,28 @@ def edit_getting(id):
         cursor = conn.cursor()
         getting = cursor.execute("""
             SELECT id, getting_by, contact_info, getting_type, reason
-            FROM getting 
+            FROM getting
             WHERE id = ?
         """, (id,)).fetchone()
         if not getting:
             errors.append("Запись не найдена")
-    return render_template('edit_getting.html', getting=getting, dogs=dogs, errors=errors)  
+    return render_template('edit_getting.html', getting=getting, dogs=dogs, errors=errors)
 
 # Статистика
 @app.route('/stats')
 def stats():
     with get_db_connection() as conn:
         by_breed = conn.execute("""
-            SELECT b.breed_name, COALESCE(COUNT(d.id), 0) AS dog_count 
-            FROM breeds b 
-            LEFT JOIN dogs d ON d.breeds_id = b.id 
+            SELECT b.breed_name, COALESCE(COUNT(d.id), 0) AS dog_count
+            FROM breeds b
+            LEFT JOIN dogs d ON d.breeds_id = b.id
             GROUP BY b.breed_name
             ORDER BY b.breed_name
         """).fetchall()
         by_location = conn.execute("""
-            SELECT l.location_name, COALESCE(COUNT(d.id), 0) AS dog_count 
-            FROM locations l 
-            LEFT JOIN dogs d ON d.location_id = l.id 
+            SELECT l.location_name, COALESCE(COUNT(d.id), 0) AS dog_count
+            FROM locations l
+            LEFT JOIN dogs d ON d.location_id = l.id
             GROUP BY l.location_name
             ORDER BY l.location_name
         """).fetchall()
@@ -1183,7 +1254,7 @@ def queries():# В маршруте /queries
     'availability': {'table': 'l', 'column': 'availability', 'type': 'number', 'label': 'Количество собак'},
     'website': {'table': 'l', 'column': 'website', 'type': 'text', 'label': 'Сайт'}
 }
-    
+
     numeric_attributes = [key for key, attr in attributes.items() if attr['type'] == 'number']
     results = None
     selected_attribute1 = None
@@ -1199,18 +1270,18 @@ def queries():# В маршруте /queries
     with get_db_connection() as conn:
         breeds = [row['breed_name'] for row in conn.execute("SELECT DISTINCT breed_name FROM breeds ORDER BY breed_name").fetchall()]
         locations = [row['location_name'] for row in conn.execute("SELECT DISTINCT location_name FROM locations ORDER BY location_name").fetchall()]
-        
+
         # Для таблицы breeds
         options['breed_name'] = [(row['breed_name'], row['breed_name']) for row in conn.execute("SELECT DISTINCT breed_name FROM breeds ORDER BY breed_name").fetchall()]
         options['breed_group'] = [(row['breed_group'], row['breed_group']) for row in conn.execute("SELECT DISTINCT breed_group FROM breeds WHERE breed_group IS NOT NULL ORDER BY breed_group").fetchall()]
         options['origin_country'] = [(row['origin_country'], row['origin_country']) for row in conn.execute("SELECT DISTINCT origin_country FROM breeds WHERE origin_country IS NOT NULL ORDER BY origin_country").fetchall()]
         options['typical_use'] = [(row['typical_use'], row['typical_use']) for row in conn.execute("SELECT DISTINCT typical_use FROM breeds WHERE typical_use IS NOT NULL ORDER BY typical_use").fetchall()]
         options['trainability_level'] = [(row['trainability_level'], row['trainability_level']) for row in conn.execute("SELECT DISTINCT trainability_level FROM breeds WHERE trainability_level IS NOT NULL ORDER BY trainability_level").fetchall()]
-        
+
         # Для таблицы locations
         options['location_name'] = [(row['location_name'], row['location_name']) for row in conn.execute("SELECT DISTINCT location_name FROM locations ORDER BY location_name").fetchall()]
         options['location_type'] = [(row['location_type'], row['location_type']) for row in conn.execute("SELECT DISTINCT location_type FROM locations WHERE location_type IS NOT NULL ORDER BY location_type").fetchall()]
-        
+
         # Для остальных таблиц
         options['coat_type_name'] = [(row['coat_type_name'], row['coat_type_name']) for row in conn.execute("SELECT DISTINCT coat_type_name FROM coat_type ORDER BY coat_type_name").fetchall()]
         options['color_variations_name'] = [(row['color_variations_name'], row['color_variations_name']) for row in conn.execute("SELECT DISTINCT color_variations_name FROM color_variations ORDER BY color_variations_name").fetchall()]
@@ -1218,7 +1289,7 @@ def queries():# В маршруте /queries
         options['size_name'] = [(row['size_name'], row['size_name']) for row in conn.execute("SELECT DISTINCT size_name FROM size ORDER BY size_name").fetchall()]
         options['getting_by'] = [(row['getting_by'], row['getting_by']) for row in conn.execute("SELECT DISTINCT getting_by FROM getting ORDER BY getting_by").fetchall()]
         options['getting_type'] = [(row['getting_type'], row['getting_type']) for row in conn.execute("SELECT DISTINCT getting_type FROM getting WHERE getting_type IS NOT NULL ORDER BY getting_type").fetchall()]
-        
+
         print("Options:", {k: len(v) for k, v in options.items()})
 
     if request.method == 'POST':
@@ -1279,14 +1350,14 @@ def queries():# В маршруте /queries
                 with get_db_connection() as conn:
                     cursor = conn.cursor()
                     query = """
-                        SELECT 
+                        SELECT
                             d.id, d.name, d.birth_date, d.registration_date, d.microchip_number,
-                            b.breed_name, b.breed_group, b.origin_country, b.average_lifes, b.typical_use, 
-                            b.common_health_issues, b.recommended_vaccinations, b.veterinary_care, 
-                            b.average_weight_male, b.average_weight_female, b.trainability_level, 
-                            b.recommended_training_age, b.common_behavioral_issues, b.preferred_training_methods, 
+                            b.breed_name, b.breed_group, b.origin_country, b.average_lifes, b.typical_use,
+                            b.common_health_issues, b.recommended_vaccinations, b.veterinary_care,
+                            b.average_weight_male, b.average_weight_female, b.trainability_level,
+                            b.recommended_training_age, b.common_behavioral_issues, b.preferred_training_methods,
                             b.typical_learning_period,
-                            l.location_name, l.location_type, l.address, l.contact_info AS location_contact_info, 
+                            l.location_name, l.location_type, l.address, l.contact_info AS location_contact_info,
                             l.price, l.availability, l.website,
                             ct.coat_type_name, cv.color_variations_name, t.temperament_name, s.size_name,
                             g.getting_by, g.contact_info AS getting_contact_info, g.getting_type, g.reason,
@@ -1353,7 +1424,7 @@ def queries():# В маршруте /queries
             except sqlite3.OperationalError as e:
                 errors.append(f"Ошибка базы данных: {str(e)}")
 
-    return render_template('queries.html', attributes=attributes, results=results, 
+    return render_template('queries.html', attributes=attributes, results=results,
                           selected_attribute1=selected_attribute1, search_min1=search_min1, search_max1=search_max1,
                           selected_attribute2=selected_attribute2, search_min2=search_min2, search_max2=search_max2,
                           errors=errors, breeds=breeds, locations=locations, numeric_attributes=numeric_attributes,

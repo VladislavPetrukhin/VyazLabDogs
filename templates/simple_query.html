@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Простой запрос</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+</head>
+<body>
+    <h1>Простой запрос</h1>
+    <nav>
+        <a href="/">Главная</a> |
+        <a href="/search">Поиск</a> |
+        <a href="/view">Собаки</a> |
+        <a href="/add">Добавить собаку</a> |
+        <a href="/add_detailed">Добавить собаку (подробно)</a> |
+        <a href="/breeds">Породы</a> |
+        <a href="/locations">Места размещения</a> |
+        <a href="/vet_examinations">Ветеринарные осмотры</a> |
+        <a href="/getting">Получение приютом</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="/sync_queries">Запросы синхр.</a> |
+        <a href="/simple_query">Простой запрос</a>
+    </nav>
+
+    <form method="POST">
+        <label for="name">Выберите имя собаки:</label><br>
+        <select name="name" id="name">
+            <option value="">-- Выберите имя --</option>
+            {% for name in names %}
+                <option value="{{ name }}" {% if name == selected_name %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Показать информацию</button>
+    </form>
+
+    {% if dog_info %}
+        <h2>Информация о собаке: {{ dog_info['name'] }}</h2>
+        <p>ID: {{ dog_info['id'] }}</p>
+        <p>Порода: {{ dog_info['breed_name'] }}</p>
+        <p>Место размещения: {{ dog_info['location_name'] }}</p>
+        <p>Дата рождения: {{ dog_info['birth_date'] or 'Не указана' }}</p>
+        <p>Дата регистрации: {{ dog_info['registration_date'] or 'Не указана' }}</p>
+        <p>Номер микрочипа: {{ dog_info['microchip_number'] or 'Не указан' }}</p>
+    {% endif %}
+</body>
+</html>
