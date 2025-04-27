@@ -387,6 +387,8 @@ def get_second_values():
     table1 = request.form.get('table1')  # Вторая таблица
     attr2 = request.form['attr2']  # Второй атрибут
 
+    print(f"Received: table={table}, attr1={attr1}, value1={value1}, table1={table1}, attr2={attr2}")  # Отладка
+
     if not table1 or table1 == table:
         table1 = table
 
@@ -395,8 +397,7 @@ def get_second_values():
         ('dogs', 'breeds'): ('d', 'b', 'JOIN breeds b ON d.breeds_id = b.id'),
         ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
         ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
-        ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
-        ('locations', 'dogs'): ('l', 'd', 'JOIN dogs d ON d.location_id = l.id'),
+        ('locations', 'dogs'): ('l', 'd', 'JOIN dogs d ON d.location_id = l.id'),  # Исправлено
         ('vet_examinations', 'dogs'): ('ve', 'd', 'JOIN dogs d ON d.vet_examinations_id = ve.id'),
         ('getting', 'dogs'): ('g', 'd', 'JOIN dogs d ON d.getting_id = g.id'),
     }
@@ -474,9 +475,11 @@ def get_second_values():
                 """
                 values = [row[attr2] for row in conn.execute(query, (value1,)).fetchall()]
         else:
+            print(f"No relationship found for table={table}, table1={table1}")  # Отладка
             return jsonify([])
 
         print(f"Second Values Query: {query}, Params: {value1}")  # Отладка
+        print(f"Returned values: {values}")  # Отладка результата
         return jsonify([str(value) for value in values if value is not None])
         
 @app.route('/sync_queries', methods=['GET', 'POST'])
@@ -504,11 +507,11 @@ def sync_queries():
     # Определение связей между таблицами
     table_relationships = {
         ('dogs', 'breeds'): ('d', 'b', 'LEFT JOIN breeds b ON d.breeds_id = b.id'),
-        ('dogs', 'locations'): ('d', 'l2', 'LEFT JOIN locations l2 ON d.location_id = l2.id'),
+        ('dogs', 'locations'): ('d', 'l', 'LEFT JOIN locations l ON d.location_id = l.id'),
         ('dogs', 'vet_examinations'): ('d', 've', 'LEFT JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
         ('dogs', 'getting'): ('d', 'g', 'LEFT JOIN getting g ON d.getting_id = g.id'),
         ('breeds', 'dogs'): ('b', 'd', 'LEFT JOIN breeds b ON d.breeds_id = b.id'),  # Используем существующий d
-        ('locations', 'dogs'): ('l2', 'd', 'JOIN locations l2 ON d.location_id = l2.id'),
+        ('locations', 'dogs'): ('l', 'd', 'JOIN locations l ON d.location_id = l.id'),
         ('vet_examinations', 'dogs'): ('ve', 'd', 'LEFT JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),  # Используем существующий d
         ('getting', 'dogs'): ('g', 'd', 'LEFT JOIN getting g ON d.getting_id = g.id'),  # Используем существующий d
     }
@@ -575,7 +578,7 @@ def sync_queries():
                         option_field = TABLES['dogs'][selected_attr1]['has_options']
                         alias = {
                             'breed_name': 'b',
-                            'location_name': 'l2',
+                            'location_name': 'l',
                             'examination_date': 've',
                             'getting_by': 'g',
                             'coat_type_name': 'ct',
@@ -603,7 +606,7 @@ def sync_queries():
                             option_field = TABLES['dogs'][selected_attr2]['has_options']
                             alias = {
                                 'breed_name': 'b',
-                                'location_name': 'l2',
+                                'location_name': 'l',
                                 'examination_date': 've',
                                 'getting_by': 'g',
                                 'coat_type_name': 'ct',
@@ -647,8 +650,8 @@ def sync_queries():
                         b.average_weight_male, b.average_weight_female, b.trainability_level,
                         b.recommended_training_age, b.common_behavioral_issues, b.preferred_training_methods,
                         b.typical_learning_period,
-                        l2.location_name, l2.location_type, l2.address, l2.contact_info AS location_contact_info,
-                        l2.price, l2.availability, l2.website,
+                        l.location_name, l.location_type, l.address, l.contact_info AS location_contact_info,
+                        l.price, l.availability, l.website,
                         ve.examination_date, ve.veterinarian_name, ve.diagnosis, ve.treatment, ve.next_examination_date,
                         g.getting_by, g.contact_info AS getting_contact_info, g.getting_type, g.reason,
                         ct.coat_type_name, cv.color_variations_name, t.temperament_name, s.size_name
