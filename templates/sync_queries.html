@@ -5,6 +5,30 @@
         <title>Запросы синхронизированные</title>
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
         <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}" />
+        <style>
+            #addModal {
+                display: none;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 20px;
+                border: 1px solid #ccc;
+                box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                z-index: 1000;
+            }
+            #overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 999;
+            }
+        </style>
     </head>
     <body>
         <h1>Запросы синхронизированные</h1>
@@ -41,7 +65,7 @@
             </select><br />
 
             <label for="first_attribute">Первый атрибут:</label><br />
-            <select name="first_attribute" id="first_attribute" onchange="updateFirstValues()">
+            <select name="first_attribute" id="first_attribute" onchange="updateFirstValues()" disabled>
                 <option value="">-- Выберите атрибут --</option>
                 {% if selected_table %}
                 {% for attr_id, attr_info in attributes[selected_table].items() %}
@@ -53,17 +77,18 @@
             </select><br />
 
             <label for="first_value">Значение:</label><br />
-            <select name="first_value" id="first_value" onchange="updateSecondValues()">
+            <select name="first_value" id="first_value" onchange="updateSecondValues()" disabled>
                 <option value="">-- Выберите значение --</option>
                 {% for value in values1 %}
                 <option value="{{ value }}" {% if value == selected_value1 %}selected{% endif %}>
                     {{ value }}
                 </option>
                 {% endfor %}
-            </select><br />
+            </select>
+            <button type="button" onclick="showAddModal('first')">Добавить</button><br />
 
             <label for="table1">Вторая таблица (опционально):</label><br />
-            <select name="table1" id="table1" onchange="updateSecondAttributes()">
+            <select name="table1" id="table1" onchange="updateSecondAttributes()" disabled>
                 <option value="">-- Выберите таблицу --</option>
                 {% for table_id, table_name in tables.items() %}
                 <option value="{{ table_id }}" {% if table_id == selected_table1 %}selected{% endif %}>
@@ -73,7 +98,7 @@
             </select><br />
 
             <label for="second_attribute">Второй атрибут:</label><br />
-            <select name="second_attribute" id="second_attribute" onchange="updateSecondValues()">
+            <select name="second_attribute" id="second_attribute" onchange="updateSecondValues()" disabled>
                 <option value="">-- Выберите атрибут --</option>
                 {% if selected_table1 %}
                 {% for attr_id, attr_info in attributes[selected_table1].items() %}
@@ -85,17 +110,26 @@
             </select><br />
 
             <label for="second_value">Значение:</label><br />
-            <select name="second_value" id="second_value">
+            <select name="second_value" id="second_value" disabled>
                 <option value="">-- Выберите значение --</option>
                 {% for value in values2 %}
                 <option value="{{ value }}" {% if value == selected_value2 %}selected{% endif %}>
                     {{ value }}
                 </option>
                 {% endfor %}
-            </select><br />
+            </select>
+            <button type="button" onclick="showAddModal('second')">Добавить</button><br />
 
             <button type="submit">Найти</button>
         </form>
+
+        <div id="overlay" onclick="closeModal()"></div>
+        <div id="addModal">
+            <h3>Добавить новое значение</h3>
+            <input type="text" id="new_value" placeholder="Введите значение">
+            <button onclick="addNewValue()">Сохранить</button>
+            <button onclick="closeModal()">Отмена</button>
+        </div>
 
         {% if results %}
         <h2>Результаты поиска</h2>
@@ -190,89 +224,159 @@
         {% endif %}
 
         <script>
+            let currentLevel = '';
+
             function updateAttributes() {
-                var table = document.getElementById("table").value;
+                const table = document.getElementById("table").value;
+                const firstAttrSelect = document.getElementById("first_attribute");
+                const firstValueSelect = document.getElementById("first_value");
+                const secondTableSelect = document.getElementById("table1");
+
+                firstAttrSelect.disabled = !table;
+                firstValueSelect.disabled = true;
+                secondTableSelect.disabled = !table;
+
                 if (table) {
                     fetch("/get_attributes?table=" + table)
-                        .then((response) => response.json())
-                        .then((data) => {
-                            var select = document.getElementById("first_attribute");
-                            select.innerHTML = '<option value="">-- Выберите атрибут --</option>';
-                            for (var key in data) {
-                                var option = document.createElement("option");
+                        .then(response => response.json())
+                        .then(data => {
+                            firstAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+                            for (const key in data) {
+                                const option = document.createElement("option");
                                 option.value = key;
                                 option.text = data[key].label;
-                                select.appendChild(option);
+                                firstAttrSelect.appendChild(option);
                             }
-                            updateFirstValues();
                         });
+                } else {
+                    firstAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+                    firstValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
                 }
             }
 
             function updateFirstValues() {
-                var table = document.getElementById("table").value;
-                var attr = document.getElementById("first_attribute").value;
+                const table = document.getElementById("table").value;
+                const attr = document.getElementById("first_attribute").value;
+                const firstValueSelect = document.getElementById("first_value");
+
+                firstValueSelect.disabled = !attr;
+
                 if (table && attr) {
                     fetch("/get_attribute_values?table=" + table + "&attribute=" + attr)
-                        .then((response) => response.json())
-                        .then((data) => {
-                            var select = document.getElementById("first_value");
-                            select.innerHTML = '<option value="">-- Выберите значение --</option>';
-                            data.forEach((value) => {
-                                var option = document.createElement("option");
+                        .then(response => response.json())
+                        .then(data => {
+                            firstValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
+                            data.forEach(value => {
+                                const option = document.createElement("option");
                                 option.value = value;
                                 option.text = value;
-                                select.appendChild(option);
+                                firstValueSelect.appendChild(option);
                             });
                         });
+                } else {
+                    firstValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
                 }
             }
 
             function updateSecondAttributes() {
-                var table = document.getElementById("table1").value;
+                const table = document.getElementById("table1").value;
+                const secondAttrSelect = document.getElementById("second_attribute");
+                const secondValueSelect = document.getElementById("second_value");
+
+                secondAttrSelect.disabled = !table;
+                secondValueSelect.disabled = true;
+
                 if (table) {
                     fetch("/get_attributes?table=" + table)
-                        .then((response) => response.json())
-                        .then((data) => {
-                            var select = document.getElementById("second_attribute");
-                            select.innerHTML = '<option value="">-- Выберите атрибут --</option>';
-                            for (var key in data) {
-                                var option = document.createElement("option");
+                        .then(response => response.json())
+                        .then(data => {
+                            secondAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+                            for (const key in data) {
+                                const option = document.createElement("option");
                                 option.value = key;
                                 option.text = data[key].label;
-                                select.appendChild(option);
+                                secondAttrSelect.appendChild(option);
                             }
                             updateSecondValues();
                         });
+                } else {
+                    secondAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+                    secondValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
                 }
             }
 
             function updateSecondValues() {
-                var table = document.getElementById("table").value;
-                var attr1 = document.getElementById("first_attribute").value;
-                var value1 = document.getElementById("first_value").value;
-                var table1 = document.getElementById("table1").value;
-                var attr2 = document.getElementById("second_attribute").value;
+                const table = document.getElementById("table").value;
+                const attr1 = document.getElementById("first_attribute").value;
+                const value1 = document.getElementById("first_value").value;
+                const table1 = document.getElementById("table1").value;
+                const attr2 = document.getElementById("second_attribute").value;
+                const secondValueSelect = document.getElementById("second_value");
+
+                secondValueSelect.disabled = !attr2;
 
                 if (table && attr1 && value1 && attr2) {
                     fetch("/get_second_values", {
                         method: "POST",
-                        headers: {
-                            "Content-Type": "application/x-www-form-urlencoded",
-                        },
-                        body: `table=${table}&attr1=${attr1}&value1=${value1}&table1=${table1}&attr2=${attr2}`,
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: `table=${table}&attr1=${attr1}&value1=${value1}&table1=${table1}&attr2=${attr2}`
                     })
-                        .then((response) => response.json())
-                        .then((data) => {
-                            var select = document.getElementById("second_value");
-                            select.innerHTML = '<option value="">-- Выберите значение --</option>';
-                            data.forEach((value) => {
-                                var option = document.createElement("option");
+                        .then(response => response.json())
+                        .then(data => {
+                            secondValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
+                            data.forEach(value => {
+                                const option = document.createElement("option");
                                 option.value = value;
                                 option.text = value;
-                                select.appendChild(option);
+                                secondValueSelect.appendChild(option);
                             });
                         });
+                } else {
+                    secondValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
+                }
+            }
+
+            function showAddModal(level) {
+                currentLevel = level;
+                document.getElementById("addModal").style.display = "block";
+                document.getElementById("overlay").style.display = "block";
+                document.getElementById("new_value").value = "";
+            }
+
+            function closeModal() {
+                document.getElementById("addModal").style.display = "none";
+                document.getElementById("overlay").style.display = "none";
+            }
+
+            function addNewValue() {
+                const table = document.getElementById(currentLevel === 'first' ? 'table' : 'table1').value;
+                const attribute = document.getElementById(currentLevel + '_attribute').value;
+                const newValue = document.getElementById("new_value").value;
+
+                if (table && attribute && newValue) {
+                    fetch('/add_value', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ table, attribute, value: newValue })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (currentLevel === 'first') {
+                                updateFirstValues();
+                            } else {
+                                updateSecondValues();
+                            }
+                            closeModal();
+                        } else {
+                            alert('Ошибка при добавлении значения: ' + (data.error || 'Неизвестная ошибка'));
+                        }
+                    })
+                    .catch(error => {
+                        alert('Ошибка: ' + error.message);
+                    });
+                } else {
+                    alert('Заполните все поля');
                 }
             }
         </script>

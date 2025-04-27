@@ -589,7 +589,7 @@ def get_second_values():
     table1 = request.form.get('table1')  # Second table (optional)
 
     if not table1 or table1 == table:
-        table1 = table  # If second table is not provided or same as first, use the first table
+        table1 = table
 
     table_relationships = {
         ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
@@ -601,24 +601,82 @@ def get_second_values():
     }
 
     with get_db_connection() as conn:
-        cursor = conn.cursor()
         if table == table1:
-            # Same table case
+            if table == 'dogs' and attr2 in TABLES['dogs'] and 'has_options' in TABLES['dogs'][attr2]:
+                option_field = TABLES['dogs'][attr2]['has_options']
+                related_table = {
+                    'breed_name': 'breeds',
+                    'location_name': 'locations',
+                    'examination_date': 'vet_examinations',
+                    'getting_by': 'getting',
+                    'coat_type_name': 'coat_type',
+                    'color_variations_name': 'color_variations',
+                    'temperament_name': 'temperament',
+                    'size_name': 'size'
+                }.get(option_field, '')
+                if related_table:
+                    query = f"SELECT DISTINCT {option_field} FROM {related_table} ORDER BY {option_field}"
+                    values = [row[option_field] for row in conn.execute(query).fetchall()]
+                    return jsonify(values)
             query = f"SELECT DISTINCT {attr2} FROM {table} WHERE {attr1} = ? ORDER BY {attr2}"
-            values = [row[attr2] for row in cursor.execute(query, (value1,)).fetchall()]
+            values = [row[attr2] for row in conn.execute(query, (value1,)).fetchall()]
         elif (table, table1) in table_relationships:
-            # Different tables with defined relationship
             alias0, alias1, join_condition = table_relationships[(table, table1)]
-            query = f"""
-                SELECT DISTINCT {alias1}.{attr2}
-                FROM {table} {alias0}
-                {join_condition}
-                WHERE {alias0}.{attr1} = ?
-                ORDER BY {alias1}.{attr2}
-            """
-            values = [row[attr2] for row in cursor.execute(query, (value1,)).fetchall()]
+            if table1 == 'dogs' and attr2 in TABLES['dogs'] and 'has_options' in TABLES['dogs'][attr2]:
+                option_field = TABLES['dogs'][attr2]['has_options']
+                related_table_alias = {
+                    'breed_name': ('b', 'breeds'),
+                    'location_name': ('l', 'locations'),
+                    'examination_date': ('ve', 'vet_examinations'),
+                    'getting_by': ('g', 'getting'),
+                    'coat_type_name': ('ct', 'coat_type'),
+                    'color_variations_name': ('cv', 'color_variations'),
+                    'temperament_name': ('t', 'temperament'),
+                    'size_name': ('s', 'size')
+                }.get(option_field, ('', ''))
+                if related_table_alias[1]:
+                    join_alias, join_table = related_table_alias
+                    if join_table == table and alias0 == join_alias:
+                        query = f"""
+                            SELECT DISTINCT {alias0}.{option_field}
+                            FROM {table} {alias0}
+                            WHERE {alias0}.{attr1} = ?
+                            ORDER BY {alias0}.{option_field}
+                        """
+                    else:
+                        additional_join = f"JOIN {join_table} {join_alias} ON {alias1}.{attr2} = {join_alias}.id"
+                        query = f"""
+                            SELECT DISTINCT {join_alias}.{option_field}
+                            FROM {table} {alias0}
+                            {join_condition}
+                            {additional_join}
+                            WHERE {alias0}.{attr1} = ?
+                            ORDER BY {join_alias}.{option_field}
+                        """
+                    values = [row[option_field] for row in conn.execute(query, (value1,)).fetchall()]
+                else:
+                    query = f"""
+                        SELECT DISTINCT {alias1}.{attr2}
+                        FROM {table} {alias0}
+                        {join_condition}
+                        WHERE {alias0}.{attr1} = ?
+                        ORDER BY {alias1}.{attr2}
+                    """
+                    values = [row[attr2] for row in conn.execute(query, (value1,)).fetchall()]
+            else:
+                query = f"""
+                    SELECT DISTINCT {alias1}.{attr2}
+                    FROM {table} {alias0}
+                    {join_condition}
+                    WHERE {alias0}.{attr1} = ?
+                    ORDER BY {alias1}.{attr2}
+                """
+                values = [row[attr2] for row in conn.execute(query, (value1,)).fetchall()]
         else:
-            return jsonify([])  # No relationship defined
+            return jsonify([])
+
+        return jsonify([str(value) for value in values if value is not None])
+
 
         return jsonify([str(value) for value in values if value is not None])
 @app.route('/sync_queries', methods=['GET', 'POST'])
