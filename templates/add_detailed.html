@@ -18,7 +18,8 @@
             <a href="/vet_examinations">Ветеринарные осмотры</a> |
             <a href="/getting">Получение приютом</a> |
             <a href="/stats">Статистика</a> |
-            <a href="/sync_queries">Запросы синхр.</a>
+            <a href="/sync_queries">Запросы синхр.</a> |
+        <a href="/simple_query">Простой запрос</a>
         </nav>
 
         {% if errors %}
@@ -82,7 +83,8 @@
                 {% for ct in coat_types %}
                 <option value="{{ ct.id }}">{{ ct.coat_type_name }}</option>
                 {% endfor %}
-            </select><br />
+            </select>
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#coatTypeModal">Добавить</button><br />
 
             <label for="color_variations">Окрас:</label><br />
             <select name="color_variations" id="color_variations">
@@ -90,7 +92,8 @@
                 {% for cv in color_variations %}
                 <option value="{{ cv.id }}">{{ cv.color_variations_name }}</option>
                 {% endfor %}
-            </select><br />
+            </select>
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#colorModal">Добавить</button><br />
 
             <label for="temperament">Темперамент:</label><br />
             <select name="temperament" id="temperament">
@@ -98,7 +101,8 @@
                 {% for t in temperaments %}
                 <option value="{{ t.id }}">{{ t.temperament_name }}</option>
                 {% endfor %}
-            </select><br />
+            </select>
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#temperamentModal">Добавить</button><br />
 
             <label for="size">Размер:</label><br />
             <select name="size" id="size">
@@ -106,7 +110,8 @@
                 {% for s in sizes %}
                 <option value="{{ s.id }}">{{ s.size_name }}</option>
                 {% endfor %}
-            </select><br />
+            </select>
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#sizeModal">Добавить</button><br />
 
             <button type="submit">Добавить собаку</button>
         </form>
@@ -253,6 +258,94 @@
             </div>
         </div>
 
+<!-- Модальное окно для типа шерсти -->
+        <div class="modal fade" id="coatTypeModal" tabindex="-1" role="dialog" aria-labelledby="coatTypeModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="coatTypeModalLabel">Добавить тип шерсти</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <label for="coat_type_name">Название типа шерсти:</label>
+                        <input type="text" id="coat_type_name" class="form-control" />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+                        <button type="button" class="btn btn-primary" onclick="addCoatType()">Сохранить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для окраса -->
+        <div class="modal fade" id="colorModal" tabindex="-1" role="dialog" aria-labelledby="colorModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="colorModalLabel">Добавить окрас</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <label for="color_variations_name">Название окраса:</label>
+                        <input type="text" id="color_variations_name" class="form-control" />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+                        <button type="button" class="btn btn-primary" onclick="addColor()">Сохранить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для темперамента -->
+        <div class="modal fade" id="temperamentModal" tabindex="-1" role="dialog" aria-labelledby="temperamentModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="temperamentModalLabel">Добавить темперамент</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <label for="temperament_name">Название темперамента:</label>
+                        <input type="text" id="temperament_name" class="form-control" />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+                        <button type="button" class="btn btn-primary" onclick="addTemperament()">Сохранить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для размера -->
+        <div class="modal fade" id="sizeModal" tabindex="-1" role="dialog" aria-labelledby="sizeModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="sizeModalLabel">Добавить размер</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <label for="size_name">Название размера:</label>
+                        <input type="text" id="size_name" class="form-control" />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+                        <button type="button" class="btn btn-primary" onclick="addSize()">Сохранить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
@@ -385,6 +478,113 @@
                                 select.appendChild(option);
                                 select.value = data.id;
                                 $("#vetModal").modal("hide");
+                            } else {
+                                alert("Ошибка: " + data.error);
+                            }
+                        });
+                }
+            }
+            function addCoatType() {
+                var data = {
+                    coat_type_name: document.getElementById("coat_type_name").value.trim()
+                };
+                if (data.coat_type_name) {
+                    fetch("/add_coat_type", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(data),
+                    })
+                        .then((response) => response.json())
+                        .then((data) => {
+                            if (data.success) {
+                                var select = document.getElementById("coat_type");
+                                var option = document.createElement("option");
+                                option.value = data.id;
+                                option.text = data.coat_type_name;
+                                select.appendChild(option);
+                                select.value = data.id;
+                                $("#coatTypeModal").modal("hide");
+                            } else {
+                                alert("Ошибка: " + data.error);
+                            }
+                        });
+                }
+            }
+
+            function addColor() {
+                var data = {
+                    color_variations_name: document.getElementById("color_variations_name").value.trim()
+                };
+                if (data.color_variations_name) {
+                    fetch("/add_color_variations", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(data),
+                    })
+                        .then((response) => response.json())
+                        .then((data) => {
+                            if (data.success) {
+                                var select = document.getElementById("color_variations");
+                                var option = document.createElement("option");
+                                option.value = data.id;
+                                option.text = data.color_variations_name;
+                                select.appendChild(option);
+                                select.value = data.id;
+                                $("#colorModal").modal("hide");
+                            } else {
+                                alert("Ошибка: " + data.error);
+                            }
+                        });
+                }
+            }
+
+            function addTemperament() {
+                var data = {
+                    temperament_name: document.getElementById("temperament_name").value.trim()
+                };
+                if (data.temperament_name) {
+                    fetch("/add_temperament", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(data),
+                    })
+                        .then((response) => response.json())
+                        .then((data) => {
+                            if (data.success) {
+                                var select = document.getElementById("temperament");
+                                var option = document.createElement("option");
+                                option.value = data.id;
+                                option.text = data.temperament_name;
+                                select.appendChild(option);
+                                select.value = data.id;
+                                $("#temperamentModal").modal("hide");
+                            } else {
+                                alert("Ошибка: " + data.error);
+                            }
+                        });
+                }
+            }
+
+            function addSize() {
+                var data = {
+                    size_name: document.getElementById("size_name").value.trim()
+                };
+                if (data.size_name) {
+                    fetch("/add_size", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(data),
+                    })
+                        .then((response) => response.json())
+                        .then((data) => {
+                            if (data.success) {
+                                var select = document.getElementById("size");
+                                var option = document.createElement("option");
+                                option.value = data.id;
+                                option.text = data.size_name;
+                                select.appendChild(option);
+                                select.value = data.id;
+                                $("#sizeModal").modal("hide");
                             } else {
                                 alert("Ошибка: " + data.error);
                             }

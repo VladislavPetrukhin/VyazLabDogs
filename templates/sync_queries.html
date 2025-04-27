@@ -41,7 +41,8 @@
             <a href="/vet_examinations">Ветеринарные осмотры</a> |
             <a href="/getting">Получение приютом</a> |
             <a href="/stats">Статистика</a> |
-            <a href="/sync_queries">Запросы синхр.</a>
+            <a href="/sync_queries">Запросы синхр.</a> |
+        <a href="/simple_query">Простой запрос</a>
         </nav>
 
         {% if errors %}
@@ -87,15 +88,17 @@
             </select>
             <button type="button" onclick="showAddModal('first')">Добавить</button><br />
 
-            <label for="table1">Вторая таблица (опционально):</label><br />
-            <select name="table1" id="table1" onchange="updateSecondAttributes()" disabled>
-                <option value="">-- Выберите таблицу --</option>
-                {% for table_id, table_name in tables.items() %}
-                <option value="{{ table_id }}" {% if table_id == selected_table1 %}selected{% endif %}>
-                    {{ table_name }}
-                </option>
-                {% endfor %}
-            </select><br />
+            <div id="secondTableContainer">
+                <label for="table1">Вторая таблица (опционально):</label><br />
+                <select name="table1" id="table1" onchange="updateSecondAttributes()" disabled>
+                    <option value="">-- Выберите таблицу --</option>
+                    {% for table_id, table_name in tables.items() %}
+                    <option value="{{ table_id }}" {% if table_id == selected_table1 %}selected{% endif %}>
+                        {{ table_name }}
+                    </option>
+                    {% endfor %}
+                </select><br />
+            </div>
 
             <label for="second_attribute">Второй атрибут:</label><br />
             <select name="second_attribute" id="second_attribute" onchange="updateSecondValues()" disabled>
@@ -394,24 +397,72 @@
                     alert('Заполните все поля');
                 }
             }
+          
             function updateSecondTableOptions() {
-            const firstTable = document.getElementById("table").value;
-            const secondTableSelect = document.getElementById("table1");
-            secondTableSelect.innerHTML = '<option value="">-- Выберите таблицу --</option>';
+                const firstTable = document.getElementById("table").value;
+                const secondTableSelect = document.getElementById("table1");
+                const secondTableContainer = document.getElementById("secondTableContainer");
+                secondTableSelect.innerHTML = '<option value="">-- Выберите таблицу --</option>';
 
-            if (firstTable && tableRelationships[firstTable]) {
-                tableRelationships[firstTable].forEach(tableId => {
-                    const option = document.createElement("option");
-                    option.value = tableId;
-                    option.text = tables[tableId];
-                    secondTableSelect.appendChild(option);
-                });
-                secondTableSelect.disabled = false;
-            } else {
-                secondTableSelect.disabled = true;
+                if (firstTable && tableRelationships[firstTable]) {
+                    const relatedTables = tableRelationships[firstTable];
+                    relatedTables.forEach(tableId => {
+                        const option = document.createElement("option");
+                        option.value = tableId;
+                        option.text = tables[tableId];
+                        secondTableSelect.appendChild(option);
+                    });
+                    secondTableSelect.disabled = false;
+
+                    // Если есть только одна связанная таблица, автоматически выбираем её и скрываем контейнер
+                    if (relatedTables.length === 1) {
+                        secondTableSelect.value = relatedTables[0];
+                        secondTableContainer.style.display = 'none'; // Скрываем второй выпадающий список
+                        updateSecondAttributes(); // Обновляем атрибуты второй таблицы
+                    } else {
+                        secondTableContainer.style.display = 'block'; // Показываем контейнер
+                    }
+                } else {
+                    secondTableSelect.disabled = true;
+                    secondTableContainer.style.display = 'block'; // Показываем контейнер по умолчанию
+                    // Очищаем списки атрибутов и значений второй таблицы
+                    document.getElementById("second_attribute").innerHTML = '<option value="">-- Выберите атрибут --</option>';
+                    document.getElementById("second_value").innerHTML = '<option value="">-- Выберите значение --</option>';
+                }
             }
-        }
-        document.getElementById("table").addEventListener("change", updateSecondTableOptions);
+
+            // Функция для сброса формы
+            function resetForm() {
+                const selects = [
+                    'table', 'first_attribute', 'first_value',
+                    'table1', 'second_attribute', 'second_value'
+                ];
+                selects.forEach(id => {
+                    const select = document.getElementById(id);
+                    select.value = '';
+                    select.disabled = id !== 'table'; // Только первый table остаётся активным
+                });
+                // Очищаем списки
+                document.getElementById("first_attribute").innerHTML = '<option value="">-- Выберите атрибут --</option>';
+                document.getElementById("first_value").innerHTML = '<option value="">-- Выберите значение --</option>';
+                document.getElementById("table1").innerHTML = '<option value="">-- Выберите таблицу --</option>';
+                document.getElementById("second_attribute").innerHTML = '<option value="">-- Выберите атрибут --</option>';
+                document.getElementById("second_value").innerHTML = '<option value="">-- Выберите значение --</option>';
+                document.getElementById("secondTableContainer").style.display = 'block'; // Показываем второй выпадающий список
+            }
+
+            // Добавляем обработчики событий
+            document.getElementById("table").addEventListener("change", function() {
+                updateAttributes();
+                updateSecondTableOptions();
+            });
+            document.getElementById("table1").addEventListener("change", updateSecondAttributes);
+
+            // Сбрасываем форму после отправки
+            document.getElementById("searchForm").addEventListener("submit", function(event) {
+                // Сброс формы после успешной отправки (асинхронно, чтобы сервер успел обработать)
+                setTimeout(resetForm, 0);
+            });
         </script>
     </body>
 </html>

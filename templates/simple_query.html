@@ -36,12 +36,60 @@
 
     {% if dog_info %}
         <h2>Информация о собаке: {{ dog_info['name'] }}</h2>
-        <p>ID: {{ dog_info['id'] }}</p>
-        <p>Порода: {{ dog_info['breed_name'] }}</p>
-        <p>Место размещения: {{ dog_info['location_name'] }}</p>
-        <p>Дата рождения: {{ dog_info['birth_date'] or 'Не указана' }}</p>
-        <p>Дата регистрации: {{ dog_info['registration_date'] or 'Не указана' }}</p>
-        <p>Номер микрочипа: {{ dog_info['microchip_number'] or 'Не указан' }}</p>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Имя</th>
+                <th>Дата рождения</th>
+                <th>Дата регистрации</th>
+                <th>Номер микрочипа</th>
+                <th>Порода</th>
+                <th>Группа породы</th>
+                <th>Страна происхождения</th>
+                <th>Место размещения</th>
+                <th>Тип места</th>
+                <th>Адрес</th>
+                <th>Дата осмотра</th>
+                <th>Ветеринар</th>
+                <th>Диагноз</th>
+                <th>Лечение</th>
+                <th>Следующий осмотр</th>
+                <th>Кем передана</th>
+                <th>Контакты передачи</th>
+                <th>Тип передачи</th>
+                <th>Причина передачи</th>
+                <th>Тип шерсти</th>
+                <th>Окрас</th>
+                <th>Темперамент</th>
+                <th>Размер</th>
+            </tr>
+            <tr>
+                <td>{{ dog_info['dog_id'] }}</td>
+                <td>{{ dog_info['name'] }}</td>
+                <td>{{ dog_info['birth_date'] or 'Не указана' }}</td>
+                <td>{{ dog_info['registration_date'] or 'Не указана' }}</td>
+                <td>{{ dog_info['microchip_number'] or 'Не указан' }}</td>
+                <td>{{ dog_info['breed_name'] }}</td>
+                <td>{{ dog_info['breed_group'] }}</td>
+                <td>{{ dog_info['origin_country'] }}</td>
+                <td>{{ dog_info['location_name'] }}</td>
+                <td>{{ dog_info['location_type'] }}</td>
+                <td>{{ dog_info['address'] }}</td>
+                <td>{{ dog_info['examination_date'] or 'Не указана' }}</td>
+                <td>{{ dog_info['veterinarian_name'] or 'Не указан' }}</td>
+                <td>{{ dog_info['diagnosis'] or 'Не указан' }}</td>
+                <td>{{ dog_info['treatment'] or 'Не указано' }}</td>
+                <td>{{ dog_info['next_examination_date'] or 'Не указана' }}</td>
+                <td>{{ dog_info['getting_by'] or 'Не указано' }}</td>
+                <td>{{ dog_info['getting_contact_info'] or 'Не указано' }}</td>
+                <td>{{ dog_info['getting_type'] or 'Не указано' }}</td>
+                <td>{{ dog_info['reason'] or 'Не указано' }}</td>
+                <td>{{ dog_info['coat_type_name'] or 'Не указано' }}</td>
+                <td>{{ dog_info['color_variations_name'] or 'Не указано' }}</td>
+                <td>{{ dog_info['temperament_name'] or 'Не указано' }}</td>
+                <td>{{ dog_info['size_name'] or 'Не указано' }}</td>
+            </tr>
+        </table>
     {% endif %}
 </body>
 </html>

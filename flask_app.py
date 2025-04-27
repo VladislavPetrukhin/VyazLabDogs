@@ -16,7 +16,7 @@ def get_db_connection():
 # Ограничения для валидации
 VALIDATION_RULES = {
     'dogs': {
-        'name': {'min_length': 5, 'max_length': 100},  # Имя собаки: 5-100 символов
+        'name': {'min_length': 3, 'max_length': 100},  # Имя собаки: 5-100 символов
         'birth_date': {'format': 'YYYY-MM-DD'},        # Дата рождения: формат YYYY-MM-DD
         'microchip_number': {'min_length': 10, 'max_length': 20},  # Номер микрочипа: 10-20 символов
         'registration_date': {'format': 'YYYY-MM-DD'}  # Дата регистрации: формат YYYY-MM-DD
@@ -140,10 +140,27 @@ def simple_query():
     if selected_name:
         with get_db_connection() as conn:
             dog_info = conn.execute("""
-                SELECT d.*, b.breed_name, l.location_name
+                SELECT DISTINCT
+                    d.id AS dog_id, d.name, d.birth_date, d.registration_date, d.microchip_number,
+                    b.breed_name, b.breed_group, b.origin_country, b.average_lifes, b.typical_use,
+                    b.common_health_issues, b.recommended_vaccinations, b.veterinary_care,
+                    b.average_weight_male, b.average_weight_female, b.trainability_level,
+                    b.recommended_training_age, b.common_behavioral_issues, b.preferred_training_methods,
+                    b.typical_learning_period,
+                    l.location_name, l.location_type, l.address, l.contact_info, l.price,
+                    l.availability, l.website,
+                    ve.examination_date, ve.veterinarian_name, ve.diagnosis, ve.treatment, ve.next_examination_date,
+                    g.getting_by, g.contact_info, g.getting_type, g.reason,
+                    ct.coat_type_name, cv.color_variations_name, t.temperament_name, s.size_name
                 FROM dogs d
-                JOIN breeds b ON d.breeds_id = b.id
-                JOIN locations l ON d.location_id = l.id
+                LEFT JOIN breeds b ON d.breeds_id = b.id
+                LEFT JOIN locations l ON d.location_id = l.id
+                LEFT JOIN vet_examinations ve ON d.vet_examinations_id = ve.id
+                LEFT JOIN getting g ON d.getting_id = g.id
+                LEFT JOIN coat_type ct ON d.coat_type = ct.id
+                LEFT JOIN color_variations cv ON d.color_variations = cv.id
+                LEFT JOIN temperament t ON d.temperament = t.id
+                LEFT JOIN size s ON d.size = s.id
                 WHERE d.name = ?
             """, (selected_name,)).fetchone()
 
@@ -362,7 +379,49 @@ def get_filtered_values():
                 return jsonify(values)
             except sqlite3.OperationalError as e:
                 return jsonify({'error': str(e)}), 500
+@app.route('/add_coat_type', methods=['POST'])
+def add_coat_type():
+    data = request.get_json()
+    coat_type_name = data.get('coat_type_name')
+    if not coat_type_name:
+        return jsonify({'success': False, 'error': 'Название типа шерсти обязательно'})
+    with get_db_connection() as conn:
+        cursor = conn.execute('INSERT INTO coat_type (coat_type_name) VALUES (?)', (coat_type_name,))
+        conn.commit()
+        return jsonify({'success': True, 'id': cursor.lastrowid, 'coat_type_name': coat_type_name})
 
+@app.route('/add_color_variations', methods=['POST'])
+def add_color_variations():
+    data = request.get_json()
+    color_variations_name = data.get('color_variations_name')
+    if not color_variations_name:
+        return jsonify({'success': False, 'error': 'Название окраса обязательно'})
+    with get_db_connection() as conn:
+        cursor = conn.execute('INSERT INTO color_variations (color_variations_name) VALUES (?)', (color_variations_name,))
+        conn.commit()
+        return jsonify({'success': True, 'id': cursor.lastrowid, 'color_variations_name': color_variations_name})
+
+@app.route('/add_temperament', methods=['POST'])
+def add_temperament():
+    data = request.get_json()
+    temperament_name = data.get('temperament_name')
+    if not temperament_name:
+        return jsonify({'success': False, 'error': 'Название темперамента обязательно'})
+    with get_db_connection() as conn:
+        cursor = conn.execute('INSERT INTO temperament (temperament_name) VALUES (?)', (temperament_name,))
+        conn.commit()
+        return jsonify({'success': True, 'id': cursor.lastrowid, 'temperament_name': temperament_name})
+
+@app.route('/add_size', methods=['POST'])
+def add_size():
+    data = request.get_json()
+    size_name = data.get('size_name')
+    if not size_name:
+        return jsonify({'success': False, 'error': 'Название размера обязательно'})
+    with get_db_connection() as conn:
+        cursor = conn.execute('INSERT INTO size (size_name) VALUES (?)', (size_name,))
+        conn.commit()
+        return jsonify({'success': True, 'id': cursor.lastrowid, 'size_name': size_name})
 # Маршрут для добавления нового значения
 @app.route('/add_value', methods=['POST'])
 def add_value():
