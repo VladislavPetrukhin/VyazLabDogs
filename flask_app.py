@@ -453,14 +453,25 @@ def get_second_values():
 
     table_relationships = {
         ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
+        ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
+        ('breeds', 'vet_examinations'): ('b', 've', 'JOIN dogs d ON d.breeds_id = b.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+        ('breeds', 'getting'): ('b', 'g', 'JOIN dogs d ON d.breeds_id = b.id JOIN getting g ON d.getting_id = g.id'),
         ('dogs', 'breeds'): ('d', 'b', 'JOIN breeds b ON d.breeds_id = b.id'),
-        ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
         ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
+        ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+        ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
         ('locations', 'dogs'): ('l', 'd', 'JOIN dogs d ON d.location_id = l.id'),
+        ('locations', 'breeds'): ('l', 'b', 'JOIN dogs d ON d.location_id = l.id JOIN breeds b ON d.breeds_id = b.id'),
+        ('locations', 'vet_examinations'): ('l', 've', 'JOIN dogs d ON d.location_id = l.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
+        ('locations', 'getting'): ('l', 'g', 'JOIN dogs d ON d.location_id = l.id JOIN getting g ON d.getting_id = g.id'),
         ('vet_examinations', 'dogs'): ('ve', 'd', 'JOIN dogs d ON d.vet_examinations_id = ve.id'),
+        ('vet_examinations', 'breeds'): ('ve', 'b', 'JOIN dogs d ON d.vet_examinations_id = ve.id JOIN breeds b ON d.breeds_id = b.id'),
+        ('vet_examinations', 'locations'): ('ve', 'l', 'JOIN dogs d ON d.vet_examinations_id = ve.id JOIN locations l ON d.location_id = l.id'),
+        ('vet_examinations', 'getting'): ('ve', 'g', 'JOIN dogs d ON d.vet_examinations_id = ve.id JOIN getting g ON d.getting_id = g.id'),
         ('getting', 'dogs'): ('g', 'd', 'JOIN dogs d ON d.getting_id = g.id'),
         ('getting', 'breeds'): ('g', 'b', 'JOIN dogs d ON d.getting_id = g.id JOIN breeds b ON d.breeds_id = b.id'),
-        ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
+        ('getting', 'locations'): ('g', 'l', 'JOIN dogs d ON d.getting_id = g.id JOIN locations l ON d.location_id = l.id'),
+        ('getting', 'vet_examinations'): ('g', 've', 'JOIN dogs d ON d.getting_id = g.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
     }
 
     with get_db_connection() as conn:

@@ -462,38 +462,63 @@ function updateSecondAttributes() {
                 }
             }
 
-            // Функция для сброса формы
-            function resetForm() {
-                const selects = [
-                    'table', 'first_attribute', 'first_value',
-                    'table1', 'second_attribute', 'second_value'
-                ];
-                selects.forEach(id => {
-                    const select = document.getElementById(id);
-                    select.value = '';
-                    select.disabled = id !== 'table'; // Только первый table остаётся активным
-                });
-                // Очищаем списки
-                document.getElementById("first_attribute").innerHTML = '<option value="">-- Выберите атрибут --</option>';
-                document.getElementById("first_value").innerHTML = '<option value="">-- Выберите значение --</option>';
-                document.getElementById("table1").innerHTML = '<option value="">-- Выберите таблицу --</option>';
-                document.getElementById("second_attribute").innerHTML = '<option value="">-- Выберите атрибут --</option>';
-                document.getElementById("second_value").innerHTML = '<option value="">-- Выберите значение --</option>';
-                document.getElementById("secondTableContainer").style.display = 'block'; // Показываем второй выпадающий список
-            }
+           // Новая функция для сброса формы
+    function resetForm() {
+        const table = document.getElementById("table");
+        const firstAttrSelect = document.getElementById("first_attribute");
+        const firstValueSelect = document.getElementById("first_value");
+        const secondTableSelect = document.getElementById("table1");
+        const secondAttrSelect = document.getElementById("second_attribute");
+        const secondValueSelect = document.getElementById("second_value");
 
-            // Добавляем обработчики событий
-            document.getElementById("table").addEventListener("change", function() {
-                updateAttributes();
-                updateSecondTableOptions();
-            });
-            document.getElementById("table1").addEventListener("change", updateSecondAttributes);
+        // Сбрасываем значения
+        table.value = "";
+        firstAttrSelect.value = "";
+        firstValueSelect.value = "";
+        secondTableSelect.value = "";
+        secondAttrSelect.value = "";
+        secondValueSelect.value = "";
 
-            // Сбрасываем форму после отправки
-            document.getElementById("searchForm").addEventListener("submit", function(event) {
-                // Сброс формы после успешной отправки (асинхронно, чтобы сервер успел обработать)
-                setTimeout(resetForm, 0);
+        // Очищаем содержимое списков и отключаем
+        firstAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+        firstValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
+        secondAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+        secondValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
+
+        firstAttrSelect.disabled = true;
+        firstValueSelect.disabled = true;
+        secondTableSelect.disabled = true;
+        secondAttrSelect.disabled = true;
+        secondValueSelect.disabled = true;
+
+        console.log("Форма сброшена");
+    }
+
+    // Обработчик отправки формы
+    document.getElementById("searchForm").addEventListener("submit", function(event) {
+        event.preventDefault(); // Предотвращаем стандартную отправку формы
+
+        const form = this;
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: form.method,
+            body: formData
+        })
+            .then(response => response.text())
+            .then(html => {
+                // Обновляем содержимое страницы
+                document.documentElement.innerHTML = html;
+                // Повторно инициализируем обработчики событий
+                document.getElementById("searchForm").addEventListener("submit", arguments.callee);
+                // Сбрасываем форму
+                resetForm();
+            })
+            .catch(error => {
+                console.error("Ошибка при отправке формы:", error);
+                alert("Ошибка при выполнении запроса. Попробуйте снова.");
             });
-        </script>
+    });
+</script>
     </body>
 </html>
