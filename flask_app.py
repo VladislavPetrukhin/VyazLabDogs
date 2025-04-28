@@ -459,62 +459,75 @@ def get_second_values():
         ('locations', 'dogs'): ('l', 'd', 'JOIN dogs d ON d.location_id = l.id'),
         ('vet_examinations', 'dogs'): ('ve', 'd', 'JOIN dogs d ON d.vet_examinations_id = ve.id'),
         ('getting', 'dogs'): ('g', 'd', 'JOIN dogs d ON d.getting_id = g.id'),
+        ('getting', 'breeds'): ('g', 'b', 'JOIN dogs d ON d.getting_id = g.id JOIN breeds b ON d.breeds_id = b.id'),
+        ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
     }
 
     with get_db_connection() as conn:
-        if table == table1:
-            if table == 'dogs' and attr2 in TABLES['dogs'] and 'has_options' in TABLES['dogs'][attr2]:
-                option_field = TABLES['dogs'][attr2]['has_options']
-                related_table = {
-                    'breed_name': 'breeds',
-                    'location_name': 'locations',
-                    'examination_date': 'vet_examinations',
-                    'getting_by': 'getting',
-                    'coat_type_name': 'coat_type',
-                    'color_variations_name': 'color_variations',
-                    'temperament_name': 'temperament',
-                    'size_name': 'size'
-                }.get(option_field, '')
-                if related_table:
-                    query = f"""
-                        SELECT DISTINCT {option_field}
-                        FROM dogs d
-                        JOIN {related_table} t ON d.{attr2} = t.id
-                        WHERE d.{attr1} = ?
-                        ORDER BY {option_field}
-                    """
-                    values = [row[option_field] for row in conn.execute(query, (value1,)).fetchall()]
+        values = []
+        try:
+            if table == table1:
+                if table == 'dogs' and attr2 in TABLES['dogs'] and 'has_options' in TABLES['dogs'][attr2]:
+                    option_field = TABLES['dogs'][attr2]['has_options']
+                    related_table = {
+                        'breed_name': 'breeds',
+                        'location_name': 'locations',
+                        'examination_date': 'vet_examinations',
+                        'getting_by': 'getting',
+                        'coat_type_name': 'coat_type',
+                        'color_variations_name': 'color_variations',
+                        'temperament_name': 'temperament',
+                        'size_name': 'size'
+                    }.get(option_field, '')
+                    if related_table:
+                        query = f"""
+                            SELECT DISTINCT {option_field}
+                            FROM dogs d
+                            JOIN {related_table} t ON d.{attr2} = t.id
+                            WHERE d.{attr1} = ?
+                            ORDER BY {option_field}
+                        """
+                        values = [row[option_field] for row in conn.execute(query, (value1,)).fetchall()]
+                    else:
+                        query = f"SELECT DISTINCT {attr2} FROM {table} WHERE {attr1} = ? ORDER BY {attr2}"
+                        values = [row[attr2] for row in conn.execute(query, (value1,)).fetchall()]
                 else:
                     query = f"SELECT DISTINCT {attr2} FROM {table} WHERE {attr1} = ? ORDER BY {attr2}"
                     values = [row[attr2] for row in conn.execute(query, (value1,)).fetchall()]
-            else:
-                query = f"SELECT DISTINCT {attr2} FROM {table} WHERE {attr1} = ? ORDER BY {attr2}"
-                values = [row[attr2] for row in conn.execute(query, (value1,)).fetchall()]
-        elif (table, table1) in table_relationships:
-            alias0, alias1, join_condition = table_relationships[(table, table1)]
-            if table1 == 'dogs' and attr2 in TABLES['dogs'] and 'has_options' in TABLES['dogs'][attr2]:
-                option_field = TABLES['dogs'][attr2]['has_options']
-                related_table_info = {
-                    'breed_name': ('b2', 'breeds', 'breeds_id'),
-                    'location_name': ('l2', 'locations', 'location_id'),
-                    'examination_date': ('ve2', 'vet_examinations', 'vet_examinations_id'),
-                    'getting_by': ('g2', 'getting', 'getting_id'),
-                    'coat_type_name': ('ct2', 'coat_type', 'coat_type'),
-                    'color_variations_name': ('cv2', 'color_variations', 'color_variations'),
-                    'temperament_name': ('t2', 'temperament', 'temperament'),
-                    'size_name': ('s2', 'size', 'size')
-                }.get(option_field, (alias1, '', attr2))
-                join_alias, join_table, join_field = related_table_info
-                if join_table:
-                    query = f"""
-                        SELECT DISTINCT {join_alias}.{option_field}
-                        FROM {table} {alias0}
-                        {join_condition}
-                        JOIN {join_table} {join_alias} ON {alias1}.{join_field} = {join_alias}.id
-                        WHERE {alias0}.{attr1} = ?
-                        ORDER BY {join_alias}.{option_field}
-                    """
-                    values = [row[option_field] for row in conn.execute(query, (value1,)).fetchall()]
+            elif (table, table1) in table_relationships:
+                alias0, alias1, join_condition = table_relationships[(table, table1)]
+                if table1 == 'dogs' and attr2 in TABLES['dogs'] and 'has_options' in TABLES['dogs'][attr2]:
+                    option_field = TABLES['dogs'][attr2]['has_options']
+                    related_table_info = {
+                        'breed_name': ('b2', 'breeds', 'breeds_id'),
+                        'location_name': ('l2', 'locations', 'location_id'),
+                        'examination_date': ('ve2', 'vet_examinations', 'vet_examinations_id'),
+                        'getting_by': ('g2', 'getting', 'getting_id'),
+                        'coat_type_name': ('ct2', 'coat_type', 'coat_type'),
+                        'color_variations_name': ('cv2', 'color_variations', 'color_variations'),
+                        'temperament_name': ('t2', 'temperament', 'temperament'),
+                        'size_name': ('s2', 'size', 'size')
+                    }.get(option_field, (alias1, '', attr2))
+                    join_alias, join_table, join_field = related_table_info
+                    if join_table:
+                        query = f"""
+                            SELECT DISTINCT {join_alias}.{option_field}
+                            FROM {table} {alias0}
+                            {join_condition}
+                            JOIN {join_table} {join_alias} ON {alias1}.{join_field} = {join_alias}.id
+                            WHERE {alias0}.{attr1} = ?
+                            ORDER BY {join_alias}.{option_field}
+                        """
+                        values = [row[option_field] for row in conn.execute(query, (value1,)).fetchall()]
+                    else:
+                        query = f"""
+                            SELECT DISTINCT {alias1}.{attr2}
+                            FROM {table} {alias0}
+                            {join_condition}
+                            WHERE {alias0}.{attr1} = ?
+                            ORDER BY {alias1}.{attr2}
+                        """
+                        values = [row[attr2] for row in conn.execute(query, (value1,)).fetchall()]
                 else:
                     query = f"""
                         SELECT DISTINCT {alias1}.{attr2}
@@ -525,17 +538,11 @@ def get_second_values():
                     """
                     values = [row[attr2] for row in conn.execute(query, (value1,)).fetchall()]
             else:
-                query = f"""
-                    SELECT DISTINCT {alias1}.{attr2}
-                    FROM {table} {alias0}
-                    {join_condition}
-                    WHERE {alias0}.{attr1} = ?
-                    ORDER BY {alias1}.{attr2}
-                """
-                values = [row[attr2] for row in conn.execute(query, (value1,)).fetchall()]
-        else:
-            print(f"No relationship found for table={table}, table1={table1}")
-            return jsonify([])
+                print(f"No relationship found for table={table}, table1={table1}")
+                return jsonify([])
+        except sqlite3.OperationalError as e:
+            print(f"SQL Error: {str(e)}, Query: {query}, Params: {value1}")
+            return jsonify({'error': f"Ошибка базы данных: {str(e)}"})
 
         print(f"Second Values Query: {query}, Params: {value1}")
         print(f"Returned values: {values}")
@@ -573,6 +580,9 @@ def sync_queries():
         selected_attr2 = request.form.get('second_attribute')
         selected_value2 = request.form.get('second_value')
 
+        print(f"Received: table={selected_table}, attr1={selected_attr1}, value1={selected_value1}, "
+              f"table1={selected_table1}, attr2={selected_attr2}, value2={selected_value2}")
+
         errors = []
         if not selected_table or selected_table not in tables:
             errors.append("Выберите первую таблицу")
@@ -608,11 +618,25 @@ def sync_queries():
 
                 # First condition
                 if selected_table == 'dogs':
-                    where_clauses.append(f"d.{selected_attr1} = ?")
+                    # Check if attr1 has has_options (e.g., breeds_id)
+                    if selected_attr1 in TABLES['dogs'] and 'has_options' in TABLES['dogs'][selected_attr1]:
+                        option_field = TABLES['dogs'][selected_attr1]['has_options']
+                        related_table = {
+                            'breed_name': 'b',
+                            'location_name': 'l',
+                            'examination_date': 've',
+                            'getting_by': 'g',
+                            'coat_type_name': 'ct',
+                            'color_variations_name': 'cv',
+                            'temperament_name': 't',
+                            'size_name': 's'
+                        }.get(option_field, 'd')
+                        where_clauses.append(f"{related_table}.{option_field} = ?")
+                    else:
+                        where_clauses.append(f"d.{selected_attr1} = ?")
                     params.append(selected_value1)
                 else:
                     alias = table_aliases[selected_table]
-                    # Handle attributes that are linked via has_options
                     if selected_attr1 in TABLES[selected_table] and 'has_options' in TABLES[selected_table][selected_attr1]:
                         option_field = TABLES[selected_table][selected_attr1]['has_options']
                         where_clauses.append(f"{alias}.{option_field} = ?")
@@ -623,7 +647,20 @@ def sync_queries():
                 # Second condition
                 if selected_table1 and selected_attr2 and selected_value2:
                     alias = table_aliases[selected_table1]
-                    if selected_attr2 in TABLES[selected_table1] and 'has_options' in TABLES[selected_table1][selected_attr2]:
+                    if selected_table1 == 'dogs' and selected_attr2 in TABLES['dogs'] and 'has_options' in TABLES['dogs'][selected_attr2]:
+                        option_field = TABLES['dogs'][selected_attr2]['has_options']
+                        related_table = {
+                            'breed_name': 'b',
+                            'location_name': 'l',
+                            'examination_date': 've',
+                            'getting_by': 'g',
+                            'coat_type_name': 'ct',
+                            'color_variations_name': 'cv',
+                            'temperament_name': 't',
+                            'size_name': 's'
+                        }.get(option_field, 'd')
+                        where_clauses.append(f"{related_table}.{option_field} = ?")
+                    elif selected_attr2 in TABLES[selected_table1] and 'has_options' in TABLES[selected_table1][selected_attr2]:
                         option_field = TABLES[selected_table1][selected_attr2]['has_options']
                         where_clauses.append(f"{alias}.{option_field} = ?")
                     else:
@@ -656,6 +693,7 @@ def sync_queries():
                     results = conn.execute(query, params).fetchall()
                 except sqlite3.OperationalError as e:
                     errors.append(f"Ошибка базы данных: {str(e)}")
+                    print(f"SQL Error: {str(e)}, Query: {query}, Params: {params}")
 
         return render_template(
             'sync_queries.html',
