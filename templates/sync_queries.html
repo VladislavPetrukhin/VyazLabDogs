@@ -244,34 +244,71 @@
         };
             let currentLevel = '';
 
-            function updateAttributes() {
-                const table = document.getElementById("table").value;
-                const firstAttrSelect = document.getElementById("first_attribute");
-                const firstValueSelect = document.getElementById("first_value");
-                const secondTableSelect = document.getElementById("table1");
+// Список атрибутов, которые нужно показывать для таблицы dogs
+const allowedDogAttributes = ['name', 'birth_date', 'registration_date', 'microchip_number'];
 
-                firstAttrSelect.disabled = !table;
-                firstValueSelect.disabled = true;
-                secondTableSelect.disabled = !table;
+function updateAttributes() {
+    const table = document.getElementById("table").value;
+    const firstAttrSelect = document.getElementById("first_attribute");
+    const firstValueSelect = document.getElementById("first_value");
+    const secondTableSelect = document.getElementById("table1");
 
-                if (table) {
-                    fetch("/get_attributes?table=" + table)
-                        .then(response => response.json())
-                        .then(data => {
-                            firstAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
-                            for (const key in data) {
-                                const option = document.createElement("option");
-                                option.value = key;
-                                option.text = data[key].label;
-                                firstAttrSelect.appendChild(option);
-                            }
-                        });
-                } else {
-                    firstAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
-                    firstValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
+    firstAttrSelect.disabled = !table;
+    firstValueSelect.disabled = true;
+    secondTableSelect.disabled = !table;
+
+    if (table) {
+        fetch("/get_attributes?table=" + table)
+            .then(response => response.json())
+            .then(data => {
+                firstAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+                for (const key in data) {
+                    // Для таблицы dogs показываем только разрешенные атрибуты
+                    if (table === 'dogs' && !allowedDogAttributes.includes(key)) {
+                        continue; // Пропускаем атрибут, если он не в разрешенном списке
+                    }
+                    const option = document.createElement("option");
+                    option.value = key;
+                    option.text = data[key].label;
+                    firstAttrSelect.appendChild(option);
                 }
-            }
+            });
+    } else {
+        firstAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+        firstValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
+    }
+}
 
+function updateSecondAttributes() {
+    const table = document.getElementById("table1").value;
+    const secondAttrSelect = document.getElementById("second_attribute");
+    const secondValueSelect = document.getElementById("second_value");
+
+    secondAttrSelect.disabled = !table;
+    secondValueSelect.disabled = true;
+
+    if (table) {
+        fetch("/get_attributes?table=" + table)
+            .then(response => response.json())
+            .then(data => {
+                secondAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+                for (const key in data) {
+                    // Для таблицы dogs показываем только разрешенные атрибуты
+                    if (table === 'dogs' && !allowedDogAttributes.includes(key)) {
+                        continue; // Пропускаем атрибут, если он не в разрешенном списке
+                    }
+                    const option = document.createElement("option");
+                    option.value = key;
+                    option.text = data[key].label;
+                    secondAttrSelect.appendChild(option);
+                }
+                updateSecondValues();
+            });
+    } else {
+        secondAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
+        secondValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
+    }
+}
             function updateFirstValues() {
                 const table = document.getElementById("table").value;
                 const attr = document.getElementById("first_attribute").value;
@@ -293,33 +330,6 @@
                         });
                 } else {
                     firstValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
-                }
-            }
-
-            function updateSecondAttributes() {
-                const table = document.getElementById("table1").value;
-                const secondAttrSelect = document.getElementById("second_attribute");
-                const secondValueSelect = document.getElementById("second_value");
-
-                secondAttrSelect.disabled = !table;
-                secondValueSelect.disabled = true;
-
-                if (table) {
-                    fetch("/get_attributes?table=" + table)
-                        .then(response => response.json())
-                        .then(data => {
-                            secondAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
-                            for (const key in data) {
-                                const option = document.createElement("option");
-                                option.value = key;
-                                option.text = data[key].label;
-                                secondAttrSelect.appendChild(option);
-                            }
-                            updateSecondValues();
-                        });
-                } else {
-                    secondAttrSelect.innerHTML = '<option value="">-- Выберите атрибут --</option>';
-                    secondValueSelect.innerHTML = '<option value="">-- Выберите значение --</option>';
                 }
             }
 
