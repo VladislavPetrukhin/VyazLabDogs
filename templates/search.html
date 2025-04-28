@@ -34,8 +34,6 @@
                 <option value="{{ breed }}" {% if breed == breed_name %}selected{% endif %}>{{ breed }}</option>
             {% endfor %}
         </select>
-        <input type="text" id="new_breed" placeholder="Новая порода">
-        <button type="button" onclick="addBreed()">Добавить</button>
         <br>
 
         <label for="location_name">Место размещения:</label>
@@ -45,8 +43,6 @@
                 <option value="{{ location }}" {% if location == location_name %}selected{% endif %}>{{ location }}</option>
             {% endfor %}
         </select>
-        <input type="text" id="new_location" placeholder="Новое место">
-        <button type="button" onclick="addLocation()">Добавить</button>
         <br>
 
         <button type="submit">Поиск</button>

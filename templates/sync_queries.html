@@ -86,6 +86,8 @@
                 </option>
                 {% endfor %}
             </select>
+            <button type="button" onclick="showAddModal('first')">Добавить</button><br />
+
 
             <div id="secondTableContainer">
                 <label for="table1">Вторая таблица (опционально):</label><br />
@@ -120,6 +122,8 @@
                 </option>
                 {% endfor %}
             </select>
+            <button type="button" onclick="showAddModal('second')">Добавить</button><br />
+
 
             <button type="submit">Найти</button>
         </form>
@@ -425,7 +429,7 @@ function updateSecondAttributes() {
                         alert('Ошибка: ' + error.message);
                     });
                 } else {
-                    alert('Заполните все поля');
+                    alert('Выберите таблицу и атрибут, введите новое значение');
                 }
             }
           
