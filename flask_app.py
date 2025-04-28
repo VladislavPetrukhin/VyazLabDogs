@@ -584,16 +584,17 @@ def sync_queries():
               f"table1={selected_table1}, attr2={selected_attr2}, value2={selected_value2}")
 
         errors = []
+        results = []  # Инициализируем results по умолчанию как пустой список
         if not selected_table or selected_table not in tables:
             errors.append("Выберите первую таблицу")
         elif not selected_attr1 or selected_attr1 not in attributes[selected_table]:
             errors.append("Выберите первый атрибут")
         elif not selected_value1:
             errors.append("Выберите значение для первого атрибута")
+        elif selected_table1 and not selected_table1 in tables:
+            errors.append("Выберите корректную вторую таблицу")
         elif selected_attr2 and not selected_table1:
             errors.append("Выберите вторую таблицу, если выбран второй атрибут")
-        elif selected_attr2 and selected_table1 not in tables:
-            errors.append("Выберите корректную вторую таблицу")
         elif selected_attr2 and selected_attr2 not in attributes.get(selected_table1, {}):
             errors.append("Выберите корректный второй атрибут")
         elif selected_attr2 and not selected_value2:
@@ -687,8 +688,6 @@ def sync_queries():
                 """
                 print(f"Query: {query}, Params: {params}")
 
-                # Initialize results
-                results = []
                 try:
                     results = conn.execute(query, params).fetchall()
                 except sqlite3.OperationalError as e:
