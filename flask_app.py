@@ -400,7 +400,53 @@ def add_color_variations():
         cursor = conn.execute('INSERT INTO color_variations (color_variations_name) VALUES (?)', (color_variations_name,))
         conn.commit()
         return jsonify({'success': True, 'id': cursor.lastrowid, 'color_variations_name': color_variations_name})
+        
+@app.route('/add_breed', methods=['POST'])
+def add_breed():
+    data = request.get_json()
+    breed_name = data.get('breed_name', '').strip()
+    if not breed_name:
+        return jsonify({'success': False, 'error': 'Название породы не указано'})
+    
+    # Валидация данных
+    validation_data = {
+        'breed_name': breed_name,
+    }
+    errors = validate_data(validation_data, VALIDATION_RULES['breeds'])
+    if errors:
+        return jsonify({'success': False, 'error': ', '.join(errors)})
 
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO breeds (
+                breed_name, breed_group, origin_country, average_lifes, typical_use,
+                common_health_issues, recommended_vaccinations, veterinary_care,
+                average_weight_male, average_weight_female, trainability_level,
+                recommended_training_age, common_behavioral_issues, preferred_training_methods,
+                typical_learning_period
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            breed_name,
+            data.get('breed_group'),
+            data.get('origin_country'),
+            data.get('average_lifes'),
+            data.get('typical_use'),
+            data.get('common_health_issues'),
+            data.get('recommended_vaccinations'),
+            data.get('veterinary_care'),
+            data.get('average_weight_male'),
+            data.get('average_weight_female'),
+            data.get('trainability_level'),
+            data.get('recommended_training_age'),
+            data.get('common_behavioral_issues'),
+            data.get('preferred_training_methods'),
+            data.get('typical_learning_period')
+        ))
+        conn.commit()
+        breed_id = cursor.lastrowid
+    return jsonify({'success': True, 'id': breed_id, 'breed_name': breed_name})
+    
 @app.route('/add_temperament', methods=['POST'])
 def add_temperament():
     data = request.get_json()
@@ -422,21 +468,67 @@ def add_size():
         cursor = conn.execute('INSERT INTO size (size_name) VALUES (?)', (size_name,))
         conn.commit()
         return jsonify({'success': True, 'id': cursor.lastrowid, 'size_name': size_name})
+        
+ALLOWED_TABLES = ['dogs', 'breeds', 'locations', 'vet_examinations', 'getting', 'coat_type', 'color_variations', 'temperament', 'size']
 # Маршрут для добавления нового значения
+DEFAULT_VALUES = {
+    'dogs': {'name': 'Неизвестная собака'},
+    'breeds': {'breed_name': 'Неизвестная порода'},
+    'locations': {'location_name': 'Неизвестное место'},
+    'vet_examinations': {'examination_date': '2000-01-01'},
+    'getting': {'getting_by': 'Неизвестный'},
+    'coat_type': {'coat_type_name': 'Неизвестный тип шерсти'},
+    'color_variations': {'color_variations_name': 'Неизвестный окрас'},
+    'temperament': {'temperament_name': 'Неизвестный темперамент'},
+    'size': {'size_name': 'Неизвестный размер'}
+}
+
 @app.route('/add_value', methods=['POST'])
 def add_value():
     data = request.get_json()
     table = data.get('table')
     attribute = data.get('attribute')
     value = data.get('value')
+
+    print(f"Adding value: table={table}, attribute={attribute}, value={value}")
+
+    # Валидация входных данных
+    if not table or table not in ALLOWED_TABLES:
+        return jsonify({'success': False, 'error': 'Недопустимая таблица'})
+    if not attribute or attribute not in TABLES.get(table, {}):
+        return jsonify({'success': False, 'error': 'Недопустимый атрибут'})
+    if not value or not value.strip():
+        return jsonify({'success': False, 'error': 'Значение не указано'})
+
+    # Валидация значения согласно VALIDATION_RULES
+    validation_data = {attribute: value}
+    errors = validate_data(validation_data, VALIDATION_RULES.get(table, {}))
+    if errors:
+        return jsonify({'success': False, 'error': ', '.join(errors)})
+
+    # Подготовка данных для вставки
+    insert_data = {attribute: value.strip()}
+    required_fields = DEFAULT_VALUES.get(table, {})
+
+    # Добавляем значения по умолчанию для обязательных полей, если они не указаны
+    for field, default_value in required_fields.items():
+        if field not in insert_data:
+            insert_data[field] = default_value
+
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(f"INSERT INTO {table} ({attribute}) VALUES (?)", (value,))
+            columns = ', '.join(insert_data.keys())
+            placeholders = ', '.join(['?' for _ in insert_data])
+            query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+            cursor.execute(query, list(insert_data.values()))
             conn.commit()
+        print(f"Successfully added value to {table}: {insert_data}")
         return jsonify({'success': True})
     except Exception as e:
+        print(f"Error adding value: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
+        
 
 @app.route('/get_second_values', methods=['POST'])
 def get_second_values():
@@ -595,7 +687,8 @@ def sync_queries():
               f"table1={selected_table1}, attr2={selected_attr2}, value2={selected_value2}")
 
         errors = []
-        results = []  # Инициализируем results по умолчанию как пустой список
+        results = []
+        warning = None
         if not selected_table or selected_table not in tables:
             errors.append("Выберите первую таблицу")
         elif not selected_attr1 or selected_attr1 not in attributes[selected_table]:
@@ -701,6 +794,10 @@ def sync_queries():
 
                 try:
                     results = conn.execute(query, params).fetchall()
+                    print(f"Results count: {len(results)}")  # Отладка: количество результатов
+                    if not results:
+                        warning = "Не найдены собаки, привязанные к таким значениям"
+                        print(f"Warning set: {warning}")
                 except sqlite3.OperationalError as e:
                     errors.append(f"Ошибка базы данных: {str(e)}")
                     print(f"SQL Error: {str(e)}, Query: {query}, Params: {params}")
@@ -711,6 +808,7 @@ def sync_queries():
             attributes=attributes,
             results=results,
             errors=errors,
+            warning=warning,
             selected_table=selected_table,
             selected_table1=selected_table1,
             selected_attr1=selected_attr1,

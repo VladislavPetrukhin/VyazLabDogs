@@ -136,7 +136,23 @@
             <button onclick="closeModal()">Отмена</button>
         </div>
 
-        {% if results %}
+{% if errors %}
+    {% for error in errors %}
+        <script>
+            console.log('Error: {{ error }}');
+            alert('Ошибка: {{ error }}');
+        </script>
+    {% endfor %}
+{% endif %}
+
+{% if warning %}
+    <script>
+        console.log('Warning: {{ warning }}');
+        alert('{{ warning }}');
+    </script>
+{% endif %}
+
+{% if results %}
         <h2>Результаты поиска</h2>
         <table>
             <tr>
@@ -183,50 +199,52 @@
             </tr>
             {% for result in results %}
             <tr>
-                <td>{{ result['dog_id'] }}</td>
-                <td>{{ result['name'] }}</td>
-                <td>{{ result['birth_date'] }}</td>
-                <td>{{ result['registration_date'] }}</td>
-                <td>{{ result['microchip_number'] }}</td>
-                <td>{{ result['breed_name'] }}</td>
-                <td>{{ result['breed_group'] }}</td>
-                <td>{{ result['origin_country'] }}</td>
-                <td>{{ result['average_lifes'] }}</td>
-                <td>{{ result['typical_use'] }}</td>
-                <td>{{ result['common_health_issues'] }}</td>
-                <td>{{ result['recommended_vaccinations'] }}</td>
-                <td>{{ result['veterinary_care'] }}</td>
-                <td>{{ result['average_weight_male'] }}</td>
-                <td>{{ result['average_weight_female'] }}</td>
+                <td>{{ result['dog_id'] or '—'}}</td>
+                <td>{{ result['name'] or '—'}}</td>
+                <td>{{ result['birth_date'] or '—'}}</td>
+                <td>{{ result['registration_date'] or '—'}}</td>
+                <td>{{ result['microchip_number'] or '—'}}</td>
+                <td>{{ result['breed_name'] or '—'}}</td>
+                <td>{{ result['breed_group'] or '—'}}</td>
+                <td>{{ result['origin_country'] or '—'}}</td>
+                <td>{{ result['average_lifes'] or '—'}}</td>
+                <td>{{ result['typical_use'] or '—'}}</td>
+                <td>{{ result['common_health_issues'] or '—'}}</td>
+                <td>{{ result['recommended_vaccinations'] or '—'}}</td>
+                <td>{{ result['veterinary_care'] or '—'}}</td>
+                <td>{{ result['average_weight_male'] or '—'}}</td>
+                <td>{{ result['average_weight_female'] or '—'}}</td>
                 <td>{{ result['trainability_level'] }}</td>
-                <td>{{ result['recommended_training_age'] }}</td>
-                <td>{{ result['common_behavioral_issues'] }}</td>
-                <td>{{ result['preferred_training_methods'] }}</td>
-                <td>{{ result['typical_learning_period'] }}</td>
-                <td>{{ result['location_name'] }}</td>
-                <td>{{ result['location_type'] }}</td>
-                <td>{{ result['address'] }}</td>
-                <td>{{ result['location_contact_info'] }}</td>
-                <td>{{ result['price'] }}</td>
-                <td>{{ result['availability'] }}</td>
-                <td>{{ result['website'] }}</td>
-                <td>{{ result['examination_date'] }}</td>
-                <td>{{ result['veterinarian_name'] }}</td>
-                <td>{{ result['diagnosis'] }}</td>
-                <td>{{ result['treatment'] }}</td>
-                <td>{{ result['next_examination_date'] }}</td>
-                <td>{{ result['getting_by'] }}</td>
-                <td>{{ result['getting_contact_info'] }}</td>
-                <td>{{ result['getting_type'] }}</td>
-                <td>{{ result['reason'] }}</td>
-                <td>{{ result['coat_type_name'] }}</td>
-                <td>{{ result['color_variations_name'] }}</td>
-                <td>{{ result['temperament_name'] }}</td>
-                <td>{{ result['size_name'] }}</td>
+                <td>{{ result['recommended_training_age'] or '—'}}</td>
+                <td>{{ result['common_behavioral_issues'] or '—'}}</td>
+                <td>{{ result['preferred_training_methods'] or '—'}}</td>
+                <td>{{ result['typical_learning_period'] or '—'}}</td>
+                <td>{{ result['location_name'] or '—'}}</td>
+                <td>{{ result['location_type'] or '—'}}</td>
+                <td>{{ result['address'] or '—'}}</td>
+                <td>{{ result['location_contact_info'] or '—'}}</td>
+                <td>{{ result['price'] or '—'}}</td>
+                <td>{{ result['availability'] or '—'}}</td>
+                <td>{{ result['website'] or '—'}}</td>
+                <td>{{ result['examination_date'] or '—'}}</td>
+                <td>{{ result['veterinarian_name'] or '—'}}</td>
+                <td>{{ result['diagnosis'] or '—'}}</td>
+                <td>{{ result['treatment'] or '—'}}</td>
+                <td>{{ result['next_examination_date'] or '—'}}</td>
+                <td>{{ result['getting_by'] or '—'}}</td>
+                <td>{{ result['getting_contact_info'] or '—'}}</td>
+                <td>{{ result['getting_type'] or '—'}}</td>
+                <td>{{ result['reason'] or '—'}}</td>
+                <td>{{ result['coat_type_name'] or '—'}}</td>
+                <td>{{ result['color_variations_name'] or '—'}}</td>
+                <td>{{ result['temperament_name'] or '—'}}</td>
+                <td>{{ result['size_name'] or '—'}}</td>
             </tr>
             {% endfor %}
         </table>
-        {% endif %}
+     {% else %}
+    <p>Нет результатов</p>
+{% endif %}
 
         <script>
         const tables = {
@@ -401,37 +419,42 @@ function updateSecondAttributes() {
                 document.getElementById("overlay").style.display = "none";
             }
 
-            function addNewValue() {
-                const table = document.getElementById(currentLevel === 'first' ? 'table' : 'table1').value;
-                const attribute = document.getElementById(currentLevel + '_attribute').value;
-                const newValue = document.getElementById("new_value").value;
+           function addNewValue() {
+    const table = document.getElementById(currentLevel === 'first' ? 'table' : 'table1').value;
+    const attribute = document.getElementById(currentLevel + '_attribute').value;
+    const newValue = document.getElementById("new_value").value.trim();
 
-                if (table && attribute && newValue) {
-                    fetch('/add_value', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ table, attribute, value: newValue })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            if (currentLevel === 'first') {
-                                updateFirstValues();
-                            } else {
-                                updateSecondValues();
-                            }
-                            closeModal();
-                        } else {
-                            alert('Ошибка при добавлении значения: ' + (data.error || 'Неизвестная ошибка'));
-                        }
-                    })
-                    .catch(error => {
-                        alert('Ошибка: ' + error.message);
-                    });
+    console.log("addNewValue:", { table, attribute, newValue });
+
+    if (!table || !attribute || !newValue) {
+        alert('Выберите таблицу и атрибут, введите новое значение');
+        return;
+    }
+
+    fetch('/add_value', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table, attribute, value: newValue })
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log("Response from /add_value:", data);
+            if (data.success) {
+                if (currentLevel === 'first') {
+                    updateFirstValues();
                 } else {
-                    alert('Выберите таблицу и атрибут, введите новое значение');
+                    updateSecondValues();
                 }
+                closeModal();
+            } else {
+                alert('Ошибка при добавлении значения: ' + (data.error || 'Неизвестная ошибка'));
             }
+        })
+        .catch(error => {
+            console.error("Error in addNewValue:", error);
+            alert('Ошибка: ' + error.message);
+        });
+}
           
             function updateSecondTableOptions() {
                 const firstTable = document.getElementById("table").value;
