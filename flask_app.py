@@ -1,17 +1,30 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 import sqlite3
 import os
 from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = 'secret'
 
-# Абсолютный путь к базе данных
-DB_PATH = os.path.join(os.path.dirname(__file__), 'database.db')
+# Пути к базам данных
+DB_PATH_1 = os.path.join(os.path.dirname(__file__), 'database1.db')
+DB_PATH_2 = os.path.join(os.path.dirname(__file__), 'database2.db')
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    active_db = session.get('active_db', DB_PATH_1)  # По умолчанию первая база данных
+    conn = sqlite3.connect(active_db, timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
+    
+@app.route('/switch_db/<int:db_number>')
+def switch_db(db_number):
+    if db_number == 1:
+        session['active_db'] = DB_PATH_1
+    elif db_number == 2:
+        session['active_db'] = DB_PATH_2
+    else:
+        return "Неверный номер базы данных", 400
+    return redirect(url_for('index'))
 
 # Ограничения для валидации
 VALIDATION_RULES = {
@@ -128,7 +141,14 @@ def validate_data(data, rules):
 # Главная страница
 @app.route('/')
 def index():
-    return render_template('index.html')
+    active_db = session.get('active_db', DB_PATH_1)  # По умолчанию DB_PATH_1, если сессия пуста
+    if active_db == DB_PATH_1:
+        active_db_number = 1
+    elif active_db == DB_PATH_2:
+        active_db_number = 2
+    else:
+        active_db_number = 0  # Если база не выбрана или путь некорректен
+    return render_template('index.html', active_db_number=active_db_number)
 
 @app.route('/simple_query', methods=['GET', 'POST'])
 def simple_query():
