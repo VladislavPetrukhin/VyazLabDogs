@@ -12,16 +12,28 @@ app.secret_key = 'secret'
 DB_PATH_1 = os.path.join(os.path.dirname(__file__), 'database1.db')
 DB_PATH_2 = os.path.join(os.path.dirname(__file__), 'database2.db')
 
-# Настройка логирования
-log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-log_handler = RotatingFileHandler('app.log', maxBytes=5*1024*1024, backupCount=2)  # 5MB per file, 2 backups
-log_handler.setFormatter(log_formatter)
-log_handler.setLevel(logging.DEBUG)
+# Укажите абсолютный путь для файла лога
+LOG_DIR = '/home/vladislav/dogs-website'  # Замените yourusername и mysite на ваши
+LOG_FILE = os.path.join(LOG_DIR, 'app.log')
 
-# Настройка основного логгера
-logger = logging.getLogger()
+# Создайте директорию для логов, если она не существует
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# Настройка логгера
+logger = logging.getLogger('myapp')  # Именованный логгер для избежания конфликтов
 logger.setLevel(logging.DEBUG)
-logger.addHandler(log_handler)
+
+# Настройка RotatingFileHandler
+log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler = RotatingFileHandler(LOG_FILE, maxBytes=5*1024*1024, backupCount=2)
+file_handler.setFormatter(log_formatter)
+file_handler.setLevel(logging.DEBUG)
+
+# Добавление обработчика к логгеру
+logger.addHandler(file_handler)
+
+# Тестовое сообщение для проверки
+logger.info('Logging setup completed. Application started.')
 
 class LoggingCursor(sqlite3.Cursor):
     def execute(self, sql, parameters=()):
