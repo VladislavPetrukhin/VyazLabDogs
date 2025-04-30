@@ -2,8 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, s
 import sqlite3
 import os
 from datetime import datetime
-import logging
-from logging.handlers import RotatingFileHandler
 
 app = Flask(__name__)
 app.secret_key = 'secret'
@@ -12,89 +10,48 @@ app.secret_key = 'secret'
 DB_PATH_1 = os.path.join(os.path.dirname(__file__), 'database1.db')
 DB_PATH_2 = os.path.join(os.path.dirname(__file__), 'database2.db')
 
-# Настройка логирования
-log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-log_handler = RotatingFileHandler('app.log', maxBytes=5*1024*1024, backupCount=2)  # 5MB per file, 2 backups
-log_handler.setFormatter(log_formatter)
-log_handler.setLevel(logging.DEBUG)
-
-# Настройка основного логгера
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-logger.addHandler(log_handler)
-
-class LoggingCursor(sqlite3.Cursor):
-    def execute(self, sql, parameters=()):
-        logging.debug(f"Executing SQL: {sql} with parameters: {parameters}")
-        return super().execute(sql, parameters)
-
-class LoggingConnection:
-    def __init__(self, conn):
-        self.conn = conn
-
-    def execute(self, sql, parameters=()):
-        # Create a cursor that inherits the connection's row_factory
-        cursor = self.conn.cursor(LoggingCursor)
-        return cursor.execute(sql, parameters)
-
-    def __getattr__(self, name):
-        return getattr(self.conn, name)
-
-    def __enter__(self):
-        self.conn.__enter__()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.conn.__exit__(exc_type, exc_val, exc_tb)
-
 def get_db_connection():
-    active_db = session.get('active_db', DB_PATH_1)
+    active_db = session.get('active_db', DB_PATH_1)  # По умолчанию первая база данных
     conn = sqlite3.connect(active_db, timeout=10)
     conn.row_factory = sqlite3.Row
-    return LoggingConnection(conn)
-
-
-
+    return conn
     
 @app.route('/switch_db/<int:db_number>')
 def switch_db(db_number):
     if db_number == 1:
         session['active_db'] = DB_PATH_1
-        logging.info(f"Switched to database 1: {DB_PATH_1}")
     elif db_number == 2:
         session['active_db'] = DB_PATH_2
-        logging.info(f"Switched to database 2: {DB_PATH_2}")
     else:
-        logging.warning(f"Attempted to switch to invalid database number: {db_number}")
         return "Неверный номер базы данных", 400
     return redirect(url_for('index'))
 
 # Ограничения для валидации
 VALIDATION_RULES = {
     'dogs': {
-        'name': {'min_length': 3, 'max_length': 100},
-        'birth_date': {'format': 'YYYY-MM-DD'},
-        'microchip_number': {'min_length': 10, 'max_length': 20},
-        'registration_date': {'format': 'YYYY-MM-DD'}
+        'name': {'min_length': 3, 'max_length': 100},  # Имя собаки: 5-100 символов
+        'birth_date': {'format': 'YYYY-MM-DD'},        # Дата рождения: формат YYYY-MM-DD
+        'microchip_number': {'min_length': 10, 'max_length': 20},  # Номер микрочипа: 10-20 символов
+        'registration_date': {'format': 'YYYY-MM-DD'}  # Дата регистрации: формат YYYY-MM-DD
     },
     'breeds': {
-        'breed_name': {'min_length': 3, 'max_length': 100},
-        'average_lifes': {'min': 5, 'max': 20}
+        'breed_name': {'min_length': 3, 'max_length': 100},  # Название породы: 3-100 символов
+        'average_lifes': {'min': 5, 'max': 20}               # Средняя продолжительность жизни: 5-20 лет
     },
     'locations': {
-        'location_name': {'min_length': 3, 'max_length': 100},
-        'address': {'min_length': 5, 'max_length': 200}
+        'location_name': {'min_length': 3, 'max_length': 100},  # Название места: 3-100 символов
+        'address': {'min_length': 5, 'max_length': 200}         # Адрес: 5-200 символов
     },
     'vet_examinations': {
-        'examination_date': {'format': 'YYYY-MM-DD'},
-        'diagnosis': {'min_length': 5, 'max_length': 200},
-        'treatment': {'min_length': 5, 'max_length': 200}
+        'examination_date': {'format': 'YYYY-MM-DD'},  # Дата осмотра: формат YYYY-MM-DD
+        'diagnosis': {'min_length': 5, 'max_length': 200},  # Диагноз: 5-200 символов
+        'treatment': {'min_length': 5, 'max_length': 200}   # Лечение: 5-200 символов
     },
     'getting': {
-        'getting_by': {'min_length': 3, 'max_length': 100},
-        'contact_info': {'min_length': 5, 'max_length': 100},
-        'getting_type': {'min_length': 3, 'max_length': 50},
-        'reason': {'min_length': 5, 'max_length': 200}
+        'getting_by': {'min_length': 3, 'max_length': 100},  # Кем получена: 3-100 символов
+        'contact_info': {'min_length': 5, 'max_length': 100},  # Контактная информация: 5-100 символов
+        'getting_type': {'min_length': 3, 'max_length': 50},   # Тип получения: 3-50 символов
+        'reason': {'min_length': 5, 'max_length': 200}         # Причина: 5-200 символов
     }
 }
 TABLES = {
@@ -153,13 +110,12 @@ TABLES = {
         'reason': {'type': 'text', 'label': 'Причина передачи'}
     }
 }
-
 # Функция для валидации данных
 def validate_data(data, rules):
     errors = []
     for field, value in data.items():
         if value is None or value == '':
-            continue
+            continue  # Пропускаем необязательные поля
         if field in rules:
             field_rules = rules[field]
             if 'min_length' in field_rules and len(value) < field_rules['min_length']:
@@ -185,13 +141,13 @@ def validate_data(data, rules):
 # Главная страница
 @app.route('/')
 def index():
-    active_db = session.get('active_db', DB_PATH_1)
+    active_db = session.get('active_db', DB_PATH_1)  # По умолчанию DB_PATH_1, если сессия пуста
     if active_db == DB_PATH_1:
         active_db_number = 1
     elif active_db == DB_PATH_2:
         active_db_number = 2
     else:
-        active_db_number = 0
+        active_db_number = 0  # Если база не выбрана или путь некорректен
     return render_template('index.html', active_db_number=active_db_number)
 
 @app.route('/simple_query', methods=['GET', 'POST'])
@@ -294,7 +250,6 @@ def get_attributes():
 
 # Новый маршрут для получения значений атрибута
 @app.route('/get_attribute_values')
-# Updated get_attribute_values function
 def get_attribute_values():
     table = request.args.get('table', '')
     attribute = request.args.get('attribute', '')
@@ -302,6 +257,7 @@ def get_attribute_values():
         attr_info = TABLES[table][attribute]
         column = attribute
         with get_db_connection() as conn:
+            # Обработка внешних ключей
             if table == 'dogs' and attribute in ['breeds_id', 'location_id', 'vet_examinations_id', 'getting_id', 'coat_type', 'color_variations', 'temperament', 'size']:
                 if attribute == 'breeds_id':
                     query = "SELECT DISTINCT b.breed_name FROM breeds b WHERE b.breed_name IS NOT NULL ORDER BY b.breed_name"
@@ -331,20 +287,20 @@ def get_attribute_values():
             else:
                 query = f"SELECT DISTINCT {column} FROM {table} WHERE {column} IS NOT NULL ORDER BY {column}"
                 values = [row[column] for row in conn.execute(query).fetchall()]
-            print(f"Table: {table}, Attribute: {attribute}, Values: {values}")
+            print(f"Table: {table}, Attribute: {attribute}, Values: {values}")  # Отладка
             return jsonify(values)
     return jsonify([])
-
 @app.route('/check_related_data', methods=['POST'])
 def check_related_data():
-    table = request.form['table']
-    attr1 = request.form['attr1']
-    value1 = request.form['value1']
-    table1 = request.form['table1']
+    table = request.form['table']  # Первая таблица
+    attr1 = request.form['attr1']  # Первый атрибут
+    value1 = request.form['value1']  # Значение первого атрибута
+    table1 = request.form['table1']  # Вторая таблица
 
     if table not in TABLES or table1 not in TABLES:
         return jsonify({'has_data': False})
 
+    # Определение связей для JOIN
     joins = {
         'dogs': '',
         'breeds': 'JOIN breeds b ON d.breeds_id = b.id',
@@ -357,6 +313,7 @@ def check_related_data():
         'size': 'JOIN size s ON d.size = s.id'
     }
 
+    # Алиасы таблиц
     table_aliases = {
         'dogs': 'd',
         'breeds': 'b',
@@ -369,6 +326,7 @@ def check_related_data():
         'size': 's'
     }
 
+    # Поля в dogs, связанные с другими таблицами
     linked_fields = {
         'breeds': 'breeds_id',
         'locations': 'location_id',
@@ -385,6 +343,7 @@ def check_related_data():
     where_clause = f"{table_alias}.{attr1} = ?"
     params = [value1]
 
+    # Если вторая таблица не 'dogs', проверяем, что связанное поле не NULL
     if table1 != 'dogs' and table1 in linked_fields:
         where_clause += f" AND d.{linked_fields[table1]} IS NOT NULL"
 
@@ -395,7 +354,6 @@ def check_related_data():
 
     has_data = count > 0
     return jsonify({'has_data': has_data})
-
 # Маршрут для получения уникальных значений атрибута
 @app.route('/get_values')
 def get_values():
@@ -410,12 +368,14 @@ def get_values():
 @app.route('/get_filtered_values', methods=['GET', 'POST'])
 def get_filtered_values():
     if request.method == 'POST':
+        # Обработка POST-запроса (две таблицы)
         table1 = request.form.get('table1')
         attr1 = request.form.get('attr1')
         value1 = request.form.get('value1')
         table2 = request.form.get('table2')
         attr2 = request.form.get('attr2')
 
+        # Валидация входных данных
         if not all([table1, attr1, value1, table2, attr2]):
             return jsonify({'error': 'Все параметры должны быть указаны'}), 400
 
@@ -431,6 +391,7 @@ def get_filtered_values():
                 """
                 values = [row['name'] for row in cursor.execute(query, (value1,)).fetchall()]
             else:
+                # Общий случай для POST
                 table_relationships = {
                     ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
                     ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
@@ -454,15 +415,18 @@ def get_filtered_values():
             return jsonify(values)
 
     else:
-        table0 = request.args.get('table0')
-        table1 = request.args.get('table1')
+        # Обработка GET-запроса (одна или две таблицы)
+        table0 = request.args.get('table0')  # Первая таблица
+        table1 = request.args.get('table1')  # Вторая таблица (опционально)
         first_attr = request.args.get('first_attr')
         first_value = request.args.get('first_value')
         second_attr = request.args.get('second_attr')
 
+        # Валидация входных данных
         if not all([table0, first_attr, first_value, second_attr]):
             return jsonify({'error': 'Все обязательные параметры должны быть указаны'}), 400
 
+        # Словарь связей между таблицами
         table_relationships = {
             ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
             ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
@@ -475,6 +439,7 @@ def get_filtered_values():
         with get_db_connection() as conn:
             cursor = conn.cursor()
             if table1 and (table0, table1) in table_relationships:
+                # Работа с двумя таблицами
                 alias0, alias1, join_condition = table_relationships[(table0, table1)]
                 query = f"""
                     SELECT DISTINCT {alias1}.{second_attr}
@@ -484,6 +449,7 @@ def get_filtered_values():
                     ORDER BY {alias1}.{second_attr}
                 """
             else:
+                # Работа с одной таблицей
                 query = f"""
                     SELECT DISTINCT {second_attr}
                     FROM {table0}
@@ -496,7 +462,6 @@ def get_filtered_values():
                 return jsonify(values)
             except sqlite3.OperationalError as e:
                 return jsonify({'error': str(e)}), 500
-
 @app.route('/add_coat_type', methods=['POST'])
 def add_coat_type():
     data = request.get_json()
@@ -526,6 +491,7 @@ def add_breed():
     if not breed_name:
         return jsonify({'success': False, 'error': 'Название породы не указано'})
     
+    # Валидация данных
     validation_data = {
         'breed_name': breed_name,
     }
@@ -587,6 +553,7 @@ def add_size():
         return jsonify({'success': True, 'id': cursor.lastrowid, 'size_name': size_name})
         
 ALLOWED_TABLES = ['dogs', 'breeds', 'locations', 'vet_examinations', 'getting', 'coat_type', 'color_variations', 'temperament', 'size']
+# Маршрут для добавления нового значения
 DEFAULT_VALUES = {
     'dogs': {'name': 'Неизвестная собака'},
     'breeds': {'breed_name': 'Неизвестная порода'},
@@ -608,6 +575,7 @@ def add_value():
 
     print(f"Adding value: table={table}, attribute={attribute}, value={value}")
 
+    # Валидация входных данных
     if not table or table not in ALLOWED_TABLES:
         return jsonify({'success': False, 'error': 'Недопустимая таблица'})
     if not attribute or attribute not in TABLES.get(table, {}):
@@ -615,14 +583,17 @@ def add_value():
     if not value or not value.strip():
         return jsonify({'success': False, 'error': 'Значение не указано'})
 
+    # Валидация значения согласно VALIDATION_RULES
     validation_data = {attribute: value}
     errors = validate_data(validation_data, VALIDATION_RULES.get(table, {}))
     if errors:
         return jsonify({'success': False, 'error': ', '.join(errors)})
 
+    # Подготовка данных для вставки
     insert_data = {attribute: value.strip()}
     required_fields = DEFAULT_VALUES.get(table, {})
 
+    # Добавляем значения по умолчанию для обязательных полей, если они не указаны
     for field, default_value in required_fields.items():
         if field not in insert_data:
             insert_data[field] = default_value
@@ -644,11 +615,11 @@ def add_value():
 
 @app.route('/get_second_values', methods=['POST'])
 def get_second_values():
-    table = request.form['table']
-    attr1 = request.form['attr1']
-    value1 = request.form['value1']
-    table1 = request.form.get('table1')
-    attr2 = request.form['attr2']
+    table = request.form['table']  # Первая таблица
+    attr1 = request.form['attr1']  # Первый атрибут
+    value1 = request.form['value1']  # Значение первого атрибута
+    table1 = request.form.get('table1')  # Вторая таблица
+    attr2 = request.form['attr2']  # Второй атрибут
 
     print(f"Received: table={table}, attr1={attr1}, value1={value1}, table1={table1}, attr2={attr2}")
 
@@ -774,6 +745,7 @@ def sync_queries():
     }
     attributes = TABLES
 
+    # Table aliases for SQL queries
     table_aliases = {
         'dogs': 'd',
         'breeds': 'b',
@@ -816,6 +788,7 @@ def sync_queries():
             errors.append("Выберите значение для второго атрибута")
         else:
             with get_db_connection() as conn:
+                # Main table is always dogs for consistency
                 main_table = 'dogs d'
                 joins = [
                     'LEFT JOIN breeds b ON d.breeds_id = b.id',
@@ -831,7 +804,9 @@ def sync_queries():
                 where_clauses = []
                 params = []
 
+                # First condition
                 if selected_table == 'dogs':
+                    # Check if attr1 has has_options (e.g., breeds_id)
                     if selected_attr1 in TABLES['dogs'] and 'has_options' in TABLES['dogs'][selected_attr1]:
                         option_field = TABLES['dogs'][selected_attr1]['has_options']
                         related_table = {
@@ -857,6 +832,7 @@ def sync_queries():
                         where_clauses.append(f"{alias}.{selected_attr1} = ?")
                     params.append(selected_value1)
 
+                # Second condition
                 if selected_table1 and selected_attr2 and selected_value2:
                     alias = table_aliases[selected_table1]
                     if selected_table1 == 'dogs' and selected_attr2 in TABLES['dogs'] and 'has_options' in TABLES['dogs'][selected_attr2]:
@@ -879,6 +855,7 @@ def sync_queries():
                         where_clauses.append(f"{alias}.{selected_attr2} = ?")
                     params.append(selected_value2)
 
+                # Build SQL query
                 query = f"""
                     SELECT DISTINCT
                         d.id AS dog_id, d.name, d.birth_date, d.registration_date, d.microchip_number,
@@ -900,7 +877,7 @@ def sync_queries():
 
                 try:
                     results = conn.execute(query, params).fetchall()
-                    print(f"Results count: {len(results)}")
+                    print(f"Results count: {len(results)}")  # Отладка: количество результатов
                     if not results:
                         warning = "Не найдены собаки, привязанные к таким значениям"
                         print(f"Warning set: {warning}")
@@ -923,6 +900,7 @@ def sync_queries():
             selected_value2=selected_value2
         )
 
+    # Handle GET request
     return render_template('sync_queries.html', tables=tables, attributes=attributes)
 
 
@@ -978,7 +956,6 @@ def add_vet_examination():
         conn.commit()
         vet_id = cursor.lastrowid
     return jsonify({'success': True, 'id': vet_id, 'examination_date': examination_date})
-
 @app.route('/add_detailed', methods=['GET', 'POST'])
 def add_detailed():
     errors = []
@@ -1064,7 +1041,7 @@ def search():
         breed_name = request.form.get('breed_name', '').strip()
         location_name = request.form.get('location_name', '').strip()
 
-        print(f"Search input: name='{name}', breed_name='{breed_name}', location_name='{location_name}'")
+        print(f"Search input: name='{name}', breed_name='{breed_name}', location_name='{location_name}'")  # Отладка
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -1086,9 +1063,9 @@ def search():
                 query += " AND LOWER(TRIM(l.location_name)) = LOWER(?)"
                 params.append(location_name)
 
-            print(f"Query: {query}, Params: {params}")
+            print(f"Query: {query}, Params: {params}")  # Отладка
             results = cursor.execute(query, params).fetchall()
-            print(f"Results: {[dict(row) for row in results]}")
+            print(f"Results: {[dict(row) for row in results]}")  # Отладка
             if not results:
                 no_results = True
 
@@ -1124,7 +1101,6 @@ def edit_vet_examination(id):
     with get_db_connection() as conn:
         exam = conn.execute("SELECT * FROM vet_examinations WHERE id = ?", (id,)).fetchone()
     return render_template('edit_vet_examination.html', exam=exam, dogs=dogs, errors=errors)
-
 # Добавление собаки
 @app.route('/add', methods=['GET', 'POST'])
 def add():
@@ -1184,7 +1160,6 @@ def add():
     return render_template('add.html', errors=errors, dogs=dogs, breeds=breeds, locations=locations,
                            coat_types=coat_types, color_variations=color_variations, temperaments=temperaments,
                            sizes=sizes, gettings=gettings, vet_examinations=vet_examinations)
-
 # Редактирование собаки
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
@@ -1233,6 +1208,7 @@ def breeds():
             'breed_name': request.form['breed_name'],
             'average_lifes': request.form['average_lifes']
         }
+        # Пример валидации (можно настроить под ваши нужды)
         if not (3 <= len(data['breed_name']) <= 100):
             errors.append("Название породы должно быть от 3 до 100 символов")
         if data['average_lifes'] and not (5 <= int(data['average_lifes']) <= 20):
@@ -1258,6 +1234,7 @@ def locations():
             'location_name': request.form['location_name'],
             'address': request.form['address']
         }
+        # Пример валидации
         if not (3 <= len(data['location_name']) <= 100):
             errors.append("Название места должно быть от 3 до 100 символов")
         if not (5 <= len(data['address']) <= 200):
@@ -1288,6 +1265,7 @@ def vet_examinations():
             'diagnosis': request.form['diagnosis'],
             'treatment': request.form['treatment']
         }
+        # Пример валидации
         if not (5 <= len(data['diagnosis']) <= 200):
             errors.append("Диагноз должен быть от 5 до 200 символов")
         if not (5 <= len(data['treatment']) <= 200):
@@ -1402,7 +1380,7 @@ def stats():
 
 # Запросы
 @app.route('/queries', methods=['GET', 'POST'])
-def queries():
+def queries():# В маршруте /queries
     attributes = {
     'name': {'table': 'd', 'column': 'name', 'type': 'text', 'label': 'Имя собаки'},
     'birth_date': {'table': 'd', 'column': 'birth_date', 'type': 'text', 'label': 'Дата рождения', 'is_date': True},
@@ -1459,20 +1437,24 @@ def queries():
     search_max2 = None
     errors = []
 
+    # Получаем варианты для полей с has_options
     options = {}
     with get_db_connection() as conn:
         breeds = [row['breed_name'] for row in conn.execute("SELECT DISTINCT breed_name FROM breeds ORDER BY breed_name").fetchall()]
         locations = [row['location_name'] for row in conn.execute("SELECT DISTINCT location_name FROM locations ORDER BY location_name").fetchall()]
 
+        # Для таблицы breeds
         options['breed_name'] = [(row['breed_name'], row['breed_name']) for row in conn.execute("SELECT DISTINCT breed_name FROM breeds ORDER BY breed_name").fetchall()]
         options['breed_group'] = [(row['breed_group'], row['breed_group']) for row in conn.execute("SELECT DISTINCT breed_group FROM breeds WHERE breed_group IS NOT NULL ORDER BY breed_group").fetchall()]
         options['origin_country'] = [(row['origin_country'], row['origin_country']) for row in conn.execute("SELECT DISTINCT origin_country FROM breeds WHERE origin_country IS NOT NULL ORDER BY origin_country").fetchall()]
         options['typical_use'] = [(row['typical_use'], row['typical_use']) for row in conn.execute("SELECT DISTINCT typical_use FROM breeds WHERE typical_use IS NOT NULL ORDER BY typical_use").fetchall()]
         options['trainability_level'] = [(row['trainability_level'], row['trainability_level']) for row in conn.execute("SELECT DISTINCT trainability_level FROM breeds WHERE trainability_level IS NOT NULL ORDER BY trainability_level").fetchall()]
 
+        # Для таблицы locations
         options['location_name'] = [(row['location_name'], row['location_name']) for row in conn.execute("SELECT DISTINCT location_name FROM locations ORDER BY location_name").fetchall()]
         options['location_type'] = [(row['location_type'], row['location_type']) for row in conn.execute("SELECT DISTINCT location_type FROM locations WHERE location_type IS NOT NULL ORDER BY location_type").fetchall()]
 
+        # Для остальных таблиц
         options['coat_type_name'] = [(row['coat_type_name'], row['coat_type_name']) for row in conn.execute("SELECT DISTINCT coat_type_name FROM coat_type ORDER BY coat_type_name").fetchall()]
         options['color_variations_name'] = [(row['color_variations_name'], row['color_variations_name']) for row in conn.execute("SELECT DISTINCT color_variations_name FROM color_variations ORDER BY color_variations_name").fetchall()]
         options['temperament_name'] = [(row['temperament_name'], row['temperament_name']) for row in conn.execute("SELECT DISTINCT temperament_name FROM temperament ORDER BY temperament_name").fetchall()]
@@ -1485,10 +1467,10 @@ def queries():
     if request.method == 'POST':
         selected_attribute1 = request.form.get('attribute1', '')
         search_min1 = request.form.get('search_min1', '')
-        search_max1 = request.form.get('search_max1', '')
+        search_max1 = request.form.get('search_max1', '')  # Оставляем пустым, если не указано
         selected_attribute2 = request.form.get('attribute2', '')
         search_min2 = request.form.get('search_min2', '')
-        search_max2 = request.form.get('search_max2', '')
+        search_max2 = request.form.get('search_max2', '')  # Оставляем пустым, если не указано
 
         print(f"POST: selected_attribute1={selected_attribute1}, search_min1={search_min1}, search_max1={search_max1}")
         print(f"POST: selected_attribute2={selected_attribute2}, search_min2={search_min2}, search_max2={search_max2}")
@@ -1505,6 +1487,7 @@ def queries():
             is_date1 = attr_info1.get('is_date', False)
 
             try:
+                # Устанавливаем границы по умолчанию
                 min_val1 = None
                 max_val1 = None
 
@@ -1517,6 +1500,7 @@ def queries():
                         errors.append(
                             f"Максимальное значение для '{attr_info1['label']}' должно быть больше минимального")
                         raise ValueError
+                    # Если не указана одна из границ, используем широкий диапазон
                     min_val1 = min_val1 if min_val1 is not None else -float('inf')
                     max_val1 = max_val1 if max_val1 is not None else float('inf')
                 elif is_date1:
@@ -1527,9 +1511,11 @@ def queries():
                     if min_val1 and max_val1 and max_val1 < min_val1:
                         errors.append(f"Максимальная дата для '{attr_info1['label']}' должна быть позже минимальной")
                         raise ValueError
+                    # Если не указана одна из границ, используем широкий диапазон дат
                     min_val1 = min_val1 if min_val1 else '1970-01-01'
                     max_val1 = max_val1 if max_val1 else '9999-12-31'
                 else:
+                    # Для текста используем точное совпадение, если указана только одна граница
                     min_val1 = search_min1
                     max_val1 = search_max1 if search_max1 else search_min1
 
@@ -1621,11 +1607,13 @@ def queries():
 def edit_location(id):
     conn = sqlite3.connect('dogs.db')
     if request.method == 'POST':
+        # Обновление данных локации
         name = request.form['name']
         conn.execute('UPDATE locations SET name = ? WHERE id = ?', (name, id))
         conn.commit()
         conn.close()
         return redirect(url_for('locations'))
+    # Отображение формы редактирования
     location = conn.execute('SELECT id, name FROM locations WHERE id = ?', (id,)).fetchone()
     conn.close()
     return render_template('edit_location.html', location=location)
@@ -1635,15 +1623,16 @@ def edit_location(id):
 def edit_breed(id):
     conn = sqlite3.connect('dogs.db')
     if request.method == 'POST':
+        # Обновление данных породы
         name = request.form['name']
         conn.execute('UPDATE breeds SET name = ? WHERE id = ?', (name, id))
         conn.commit()
         conn.close()
         return redirect(url_for('breeds'))
+    # Отображение формы редактирования
     breed = conn.execute('SELECT id, name FROM breeds WHERE id = ?', (id,)).fetchone()
     conn.close()
     return render_template('edit_breed.html', breed=breed)
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)

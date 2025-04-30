@@ -568,6 +568,7 @@ document.getElementById("searchForm").addEventListener("submit", function(event)
         .catch(error => {
             console.error("Ошибка при отправке формы:", error);
             alert("Ошибка при выполнении запроса. Попробуйте снова.");
+            resetForm();
         });
 });
 </script>
