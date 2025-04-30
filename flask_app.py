@@ -270,7 +270,70 @@ def get_attribute_values():
             print(f"Table: {table}, Attribute: {attribute}, Values: {values}")  # Отладка
             return jsonify(values)
     return jsonify([])
+@app.route('/check_related_data', methods=['POST'])
+def check_related_data():
+    table = request.form['table']  # Первая таблица
+    attr1 = request.form['attr1']  # Первый атрибут
+    value1 = request.form['value1']  # Значение первого атрибута
+    table1 = request.form['table1']  # Вторая таблица
 
+    if table not in TABLES or table1 not in TABLES:
+        return jsonify({'has_data': False})
+
+    # Определение связей для JOIN
+    joins = {
+        'dogs': '',
+        'breeds': 'JOIN breeds b ON d.breeds_id = b.id',
+        'locations': 'JOIN locations l ON d.location_id = l.id',
+        'vet_examinations': 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id',
+        'getting': 'JOIN getting g ON d.getting_id = g.id',
+        'coat_type': 'JOIN coat_type ct ON d.coat_type = ct.id',
+        'color_variations': 'JOIN color_variations cv ON d.color_variations = cv.id',
+        'temperament': 'JOIN temperament t ON d.temperament = t.id',
+        'size': 'JOIN size s ON d.size = s.id'
+    }
+
+    # Алиасы таблиц
+    table_aliases = {
+        'dogs': 'd',
+        'breeds': 'b',
+        'locations': 'l',
+        'vet_examinations': 've',
+        'getting': 'g',
+        'coat_type': 'ct',
+        'color_variations': 'cv',
+        'temperament': 't',
+        'size': 's'
+    }
+
+    # Поля в dogs, связанные с другими таблицами
+    linked_fields = {
+        'breeds': 'breeds_id',
+        'locations': 'location_id',
+        'vet_examinations': 'vet_examinations_id',
+        'getting': 'getting_id',
+        'coat_type': 'coat_type',
+        'color_variations': 'color_variations',
+        'temperament': 'temperament',
+        'size': 'size'
+    }
+
+    join_str = joins.get(table, '')
+    table_alias = table_aliases.get(table, 'd')
+    where_clause = f"{table_alias}.{attr1} = ?"
+    params = [value1]
+
+    # Если вторая таблица не 'dogs', проверяем, что связанное поле не NULL
+    if table1 != 'dogs' and table1 in linked_fields:
+        where_clause += f" AND d.{linked_fields[table1]} IS NOT NULL"
+
+    query = f"SELECT COUNT(*) FROM dogs d {join_str} WHERE {where_clause}"
+
+    with get_db_connection() as conn:
+        count = conn.execute(query, params).fetchone()[0]
+
+    has_data = count > 0
+    return jsonify({'has_data': has_data})
 # Маршрут для получения уникальных значений атрибута
 @app.route('/get_values')
 def get_values():
