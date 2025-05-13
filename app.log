@@ -4,3 +4,18 @@
  * Running on http://192.168.1.205:5000
 2025-04-30 15:57:24,950 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
 2025-04-30 16:01:29,331 - myapp - INFO - Logging setup completed. Application started.
+2025-05-13 23:27:05,117 - myapp - INFO - Logging setup completed. Application started.
+2025-05-13 23:31:22,244 - myapp - INFO - Logging setup completed. Application started.
+2025-05-13 23:33:46,436 - myapp - INFO - Logging setup completed. Application started.
+2025-05-13 23:43:32,119 - myapp - INFO - Logging setup completed. Application started.
+2025-05-13 23:43:49,295 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-13 23:44:16,310 - myapp - INFO - Added dog: etertre
+2025-05-13 23:44:33,889 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-13 23:45:03,598 - myapp - INFO - Added dog: fdgdfg
+2025-05-13 23:48:19,823 - myapp - INFO - Logging setup completed. Application started.
+2025-05-13 23:48:26,886 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-13 23:48:39,597 - myapp - INFO - Added dog: fdgdfgfdgfd
+2025-05-13 23:48:39,615 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-13 23:52:05,254 - myapp - INFO - Logging setup completed. Application started.
+2025-05-13 23:52:18,711 - myapp - INFO - Added dog: dsfsdfdssd
+2025-05-13 23:52:18,728 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations

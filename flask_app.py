@@ -994,6 +994,7 @@ def add_vet_examination():
 @app.route('/add_detailed', methods=['GET', 'POST'])
 def add_detailed():
     errors = []
+    form_data = {}  # Для сохранения введенных данных
     with get_db_connection() as conn:
         breeds = conn.execute("SELECT id, breed_name FROM breeds ORDER BY breed_name").fetchall()
         locations = conn.execute("SELECT id, location_name FROM locations ORDER BY location_name").fetchall()
@@ -1006,12 +1007,12 @@ def add_detailed():
 
     if request.method == 'POST':
         dog_data = {
-            'name': request.form['name'],
+            'name': request.form['name'].strip(),
             'birth_date': request.form['birth_date'] or None,
             'registration_date': request.form['registration_date'] or None,
-            'microchip_number': request.form['microchip_number'] or None,
-            'breeds_id': request.form['breeds_id'],
-            'location_id': request.form['location_id'],
+            'microchip_number': request.form['microchip_number'].strip() or None,
+            'breeds_id': request.form['breeds_id'] or None,
+            'location_id': request.form['location_id'] or None,
             'coat_type': request.form['coat_type'] or None,
             'color_variations': request.form['color_variations'] or None,
             'temperament': request.form['temperament'] or None,
@@ -1019,24 +1020,64 @@ def add_detailed():
             'getting_id': request.form['getting_id'] or None,
             'vet_examinations_id': request.form['vet_examinations_id'] or None
         }
-        errors = validate_data(dog_data, VALIDATION_RULES['dogs'])
-        if not errors:
+        form_data = dog_data.copy()  # Сохраняем данные для шаблона
+
+        # Проверка обязательных полей
+        if not dog_data['name']:
+            errors.append("Кличка собаки обязательна для заполнения")
+        if not dog_data['breeds_id']:
+            errors.append("Порода обязательна для выбора")
+        if not dog_data['location_id']:
+            errors.append("Место размещения обязательно для выбора")
+
+        # Валидация дат
+        if dog_data['birth_date'] and dog_data['registration_date']:
+            try:
+                birth_date = datetime.strptime(dog_data['birth_date'], '%Y-%m-%d')
+                reg_date = datetime.strptime(dog_data['registration_date'], '%Y-%m-%d')
+                if reg_date < birth_date:
+                    errors.append("Дата регистрации не может быть раньше даты рождения")
+            except ValueError:
+                errors.append("Неверный формат дат")
+
+        if dog_data['vet_examinations_id'] and dog_data['birth_date']:
             with get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO dogs (name, birth_date, registration_date, microchip_number, breeds_id, location_id,
-                                      coat_type, color_variations, temperament, size, getting_id, vet_examinations_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (dog_data['name'], dog_data['birth_date'], dog_data['registration_date'],
-                      dog_data['microchip_number'], dog_data['breeds_id'], dog_data['location_id'],
-                      dog_data['coat_type'], dog_data['color_variations'], dog_data['temperament'],
-                      dog_data['size'], dog_data['getting_id'], dog_data['vet_examinations_id']))
-                conn.commit()
-            return redirect(url_for('view'))
+                vet_exam = conn.execute("SELECT examination_date FROM vet_examinations WHERE id = ?",
+                                        (dog_data['vet_examinations_id'],)).fetchone()
+                if vet_exam and vet_exam['examination_date']:
+                    try:
+                        exam_date = datetime.strptime(vet_exam['examination_date'], '%Y-%m-%d')
+                        birth_date = datetime.strptime(dog_data['birth_date'], '%Y-%m-%d')
+                        if exam_date < birth_date:
+                            errors.append("Дата ветеринарного осмотра не может быть раньше даты рождения")
+                    except ValueError:
+                        errors.append("Неверный формат даты ветеринарного осмотра")
+
+        # Дополнительная валидация из VALIDATION_RULES
+        errors.extend(validate_data(dog_data, VALIDATION_RULES['dogs']))
+
+        if not errors:
+            try:
+                with get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        INSERT INTO dogs (name, birth_date, registration_date, microchip_number, breeds_id, location_id,
+                                          coat_type, color_variations, temperament, size, getting_id, vet_examinations_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (dog_data['name'], dog_data['birth_date'], dog_data['registration_date'],
+                          dog_data['microchip_number'], dog_data['breeds_id'], dog_data['location_id'],
+                          dog_data['coat_type'], dog_data['color_variations'], dog_data['temperament'],
+                          dog_data['size'], dog_data['getting_id'], dog_data['vet_examinations_id']))
+                    conn.commit()
+                    logger.info(f"Added dog: {dog_data['name']}")
+                return redirect(url_for('stats', success=1))  # Changed to success=1 for pop-up
+            except sqlite3.Error as e:
+                errors.append(f"Ошибка базы данных: {str(e)}")
+                logger.error(f"Database error while adding dog: {str(e)}")
 
     return render_template('add_detailed.html', errors=errors, breeds=breeds, locations=locations,
                            coat_types=coat_types, color_variations=color_variations, temperaments=temperaments,
-                           sizes=sizes, gettings=gettings, vet_examinations=vet_examinations)
+                           sizes=sizes, gettings=gettings, vet_examinations=vet_examinations, form_data=form_data)
 
 # Просмотр собак
 @app.route('/view')
@@ -1068,18 +1109,28 @@ def search():
     no_results = False
 
     with get_db_connection() as conn:
+        # Список имён собак и пород
+        dog_names = [row['name'] for row in conn.execute("SELECT DISTINCT name FROM dogs ORDER BY name").fetchall()]
         breeds = [row['breed_name'] for row in conn.execute("SELECT DISTINCT breed_name FROM breeds ORDER BY breed_name").fetchall()]
-        locations = [row['location_name'] for row in conn.execute("SELECT DISTINCT location_name FROM locations ORDER BY location_name").fetchall()]
+        locations = []
 
-    if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        breed_name = request.form.get('breed_name', '').strip()
-        location_name = request.form.get('location_name', '').strip()
+        if request.method == 'POST':
+            name = request.form.get('name', '').strip()
+            breed_name = request.form.get('breed_name', '').strip()
+            location_name = request.form.get('location_name', '').strip()
 
-        print(f"Search input: name='{name}', breed_name='{breed_name}', location_name='{location_name}'")
+            # Получение подходящих мест для выбранной породы
+            if breed_name:
+                locations = [row['location_name'] for row in conn.execute("""
+                    SELECT DISTINCT l.location_name
+                    FROM dogs d
+                    JOIN breeds b ON d.breeds_id = b.id
+                    JOIN locations l ON d.location_id = l.id
+                    WHERE b.breed_name = ?
+                    ORDER BY l.location_name
+                """, (breed_name,)).fetchall()]
 
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
+            # Формируем SQL-запрос с условиями
             query = """
                 SELECT d.id, d.name, b.breed_name, l.location_name, d.birth_date, d.registration_date, d.microchip_number
                 FROM dogs d
@@ -1090,23 +1141,26 @@ def search():
             params = []
 
             if name:
-                query += " AND LOWER(TRIM(d.name)) LIKE LOWER(?)"
-                params.append(f"%{name}%")
+                query += " AND d.name = ?"
+                params.append(name)
             if breed_name:
+                query += " AND b.breed_name = ?"
                 params.append(breed_name)
             if location_name:
-                query += " AND LOWER(TRIM(l.location_name)) = LOWER(?)"
+                query += " AND l.location_name = ?"
                 params.append(location_name)
 
-            print(f"Query: {query}, Params: {params}")
-            results = cursor.execute(query, params).fetchall()
-            print(f"Results: {[dict(row) for row in results]}")
+            results = conn.execute(query, params).fetchall()
+            print(f"Search query executed with params: {params}")
             if not results:
                 no_results = True
 
     return render_template('search.html', results=results, name=name,
                            breed_name=breed_name, location_name=location_name,
-                           no_results=no_results, breeds=breeds, locations=locations)
+                           no_results=no_results, breeds=breeds, locations=locations,
+                           dog_names=dog_names)
+
+
 
 
 @app.route('/edit_vet_examination/<int:id>', methods=['GET', 'POST'])
@@ -1401,6 +1455,7 @@ def stats():
             FROM breeds b
             LEFT JOIN dogs d ON d.breeds_id = b.id
             GROUP BY b.breed_name
+            HAVING COUNT(d.id) > 0
             ORDER BY b.breed_name
         """).fetchall()
         by_location = conn.execute("""
@@ -1408,8 +1463,10 @@ def stats():
             FROM locations l
             LEFT JOIN dogs d ON d.location_id = l.id
             GROUP BY l.location_name
+            HAVING COUNT(d.id) > 0
             ORDER BY l.location_name
         """).fetchall()
+        logger.info(f"Statistics retrieved: {len(by_breed)} breeds, {len(by_location)} locations")
     return render_template('stats.html', by_breed=by_breed, by_location=by_location)
 
 # Запросы

@@ -3,32 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <title>Статистика</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { margin-bottom: 20px; }
+        nav { margin-bottom: 20px; }
+        nav a { margin-right: 10px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+            text-align: center;
+            font-size: 16px;
+        }
+        .popup-close {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
     <h1>Статистика</h1>
-
-       <nav>
-        <a href="/">Главная</a> |
-        <a href="/add_detailed">Добавить</a> |
-        <a href="/stats">Статистика</a> |
-        <a href="/sync_queries">Поиск по атрибутам</a>
+    <nav>
+        <a href="{{ url_for('index') }}">Главная</a> |
+        <a href="{{ url_for('add_detailed') }}">Добавить подробно</a> |
+        <a href="{{ url_for('stats') }}">Статистика</a> |
+        <a href="{{ url_for('sync_queries') }}">Поиск по атрибутам</a>
     </nav>
-    <h2>Количество собак по породам</h2>
-    <table>
-        <tr><th>Порода</th><th>Количество собак</th></tr>
-        {% for item in by_breed %}
-        <tr><td>{{ item['breed_name'] }}</td><td>{{ item['dog_count'] }}</td></tr>
-        {% endfor %}
-    </table>
 
-    <h2>Количество собак по местам размещения</h2>
+    <div id="successPopup" class="popup">
+        <span class="popup-close" onclick="closePopup()">×</span>
+        Добавлено успешно
+    </div>
+
+    <h2>Собаки по породам</h2>
+    {% if by_breed %}
     <table>
-        <tr><th>Место размещения</th><th>Количество собак</th></tr>
-        {% for item in by_location %}
-        <tr><td>{{ item['location_name'] }}</td><td>{{ item['dog_count'] }}</td></tr>
+        <tr>
+            <th>Порода</th>
+            <th>Количество собак</th>
+        </tr>
+        {% for breed in by_breed %}
+        <tr>
+            <td>{{ breed.breed_name }}</td>
+            <td>{{ breed.dog_count }}</td>
+        </tr>
         {% endfor %}
     </table>
+    {% else %}
+    <p>Нет данных о породах с собаками.</p>
+    {% endif %}
+
+    <h2>Собаки по местам размещения</h2>
+    {% if by_location %}
+    <table>
+        <tr>
+            <th>Место размещения</th>
+            <th>Количество собак</th>
+        </tr>
+        {% for location in by_location %}
+        <tr>
+            <td>{{ location.location_name }}</td>
+            <td>{{ location.dog_count }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>Нет данных о местах размещения с собаками.</p>
+    {% endif %}
+
+    <script>
+        // Check for success query parameter and show pop-up
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('success') === '1') {
+            const popup = document.getElementById('successPopup');
+            popup.style.display = 'block';
+            // Auto-close after 3 seconds
+            setTimeout(() => {
+                popup.style.display = 'none';
+                // Optionally remove success query parameter from URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }, 3000);
+        }
+
+        // Function to close pop-up manually
+        function closePopup() {
+            document.getElementById('successPopup').style.display = 'none';
+            // Optionally remove success query parameter from URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    </script>
 </body>
 </html>

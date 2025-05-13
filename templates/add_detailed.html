@@ -1,590 +1,575 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
-    <head>
-        <meta charset="UTF-8" />
-        <title>Добавить собаку (подробно)</title>
-        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
-        <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}" />
-    </head>
-    <body>
-        <h1>Добавить собаку (подробный режим)</h1>
-         <nav>
-        <a href="/">Главная</a> |
-        <a href="/add_detailed">Добавить</a> |
-        <a href="/stats">Статистика</a> |
-        <a href="/sync_queries">Поиск по атрибутам</a>
+<head>
+    <meta charset="UTF-8">
+    <title>Добавить собаку (подробный режим)</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .error { color: red; margin: 10px 0; }
+        .required::after { content: ' *'; color: red; }
+        .example { color: gray; font-size: 0.9em; margin-top: 5px; }
+        .error-field { border: 1px solid red; }
+        .modal { 
+            display: none; 
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            background: white; 
+            padding: 20px; 
+            border: 1px solid #ccc; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.5); 
+            z-index: 1000; 
+        }
+        .modal-overlay { 
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.5); 
+            z-index: 999; 
+        }
+        nav { margin-bottom: 20px; }
+        nav a { margin-right: 10px; }
+        form p { margin-bottom: 15px; }
+        label { display: inline-block; width: 200px; }
+        input, select { width: 300px; padding: 5px; }
+        input[type="submit"], input[type="button"] { width: auto; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Добавить собаку (подробный режим)</h1>
+    <nav>
+        <a href="{{ url_for('index') }}">Главная</a> |
+        <a href="{{ url_for('add') }}">Добавить</a> |
+        <a href="{{ url_for('stats') }}">Статистика</a> |
+        <a href="{{ url_for('sync_queries') }}">Поиск по атрибутам</a>
     </nav>
 
-        {% if errors %}
-        <ul class="errors">
-            {% for error in errors %}
+    {% if errors %}
+    <div class="error">
+        <ul>
+        {% for error in errors %}
             <li>{{ error }}</li>
-            {% endfor %}
+        {% endfor %}
         </ul>
-        {% endif %}
+    </div>
+    {% endif %}
 
-        <form method="POST" id="dogForm">
-            <h2>Информация о собаке</h2>
-            <label for="name">Кличка:</label><br />
-            <input type="text" name="name" id="name" required /><br />
-            <label for="birth_date">Дата рождения:</label><br />
-            <input type="date" name="birth_date" id="birth_date" /><br />
-            <label for="registration_date">Дата регистрации:</label><br />
-            <input type="date" name="registration_date" id="registration_date" /><br />
-            <label for="microchip_number">Номер микрочипа:</label><br />
-            <input type="text" name="microchip_number" id="microchip_number" /><br />
-
-            <label for="breeds_id">Порода:</label><br />
-            <select name="breeds_id" id="breeds_id">
+    <form method="POST" action="{{ url_for('add_detailed') }}">
+        <h2>Информация о собаке</h2>
+        <p>
+            <label class="required">Кличка:</label><br>
+            <input type="text" name="name" value="{{ form_data.name or '' }}" {% if 'Кличка' in errors %}class="error-field"{% endif %}>
+            <div class="example">Пример: Рекс</div>
+        </p>
+        <p>
+            <label>Дата рождения:</label><br>
+            <input type="date" name="birth_date" value="{{ form_data.birth_date or '' }}">
+            <div class="example">Пример: 2020-05-15</div>
+        </p>
+        <p>
+            <label>Дата регистрации:</label><br>
+            <input type="date" name="registration_date" value="{{ form_data.registration_date or '' }}">
+            <div class="example">Пример: 2023-10-20</div>
+        </p>
+        <p>
+            <label>Номер микрочипа:</label><br>
+            <input type="text" name="microchip_number" value="{{ form_data.microchip_number or '' }}">
+            <div class="example">Пример: 123456789012345</div>
+        </p>
+        <p>
+            <label class="required">Порода:</label><br>
+            <select name="breeds_id" {% if 'Порода' in errors %}class="error-field"{% endif %}>
                 <option value="">-- Выберите породу --</option>
                 {% for breed in breeds %}
-                <option value="{{ breed.id }}">{{ breed.breed_name }}</option>
+                <option value="{{ breed.id }}" {% if form_data.breeds_id == breed.id|string %}selected{% endif %}>
+                    {{ breed.breed_name }}
+                </option>
                 {% endfor %}
             </select>
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#breedModal">Добавить</button><br />
-
-            <label for="location_id">Место размещения:</label><br />
-            <select name="location_id" id="location_id">
+            <a href="#" onclick="openModal('breedModal')">Добавить породу</a>
+        </p>
+        <p>
+            <label class="required">Место размещения:</label><br>
+            <select name="location_id" {% if 'Место размещения' in errors %}class="error-field"{% endif %}>
                 <option value="">-- Выберите место --</option>
                 {% for location in locations %}
-                <option value="{{ location.id }}">{{ location.location_name }}</option>
+                <option value="{{ location.id }}" {% if form_data.location_id == location.id|string %}selected{% endif %}>
+                    {{ location.location_name }}
+                </option>
                 {% endfor %}
             </select>
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#locationModal">Добавить</button><br />
-
-            <label for="getting_id">Получение:</label><br />
-            <select name="getting_id" id="getting_id">
+            <a href="#" onclick="openModal('locationModal')">Добавить место</a>
+        </p>
+        <p>
+            <label>Получение:</label><br>
+            <select name="getting_id">
                 <option value="">-- Выберите --</option>
                 {% for getting in gettings %}
-                <option value="{{ getting.id }}">{{ getting.getting_by }}</option>
+                <option value="{{ getting.id }}" {% if form_data.getting_id == getting.id|string %}selected{% endif %}>
+                    {{ getting.getting_by }}
+                </option>
                 {% endfor %}
             </select>
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#gettingModal">Добавить</button><br />
-
-            <label for="vet_examinations_id">Ветеринарный осмотр:</label><br />
-            <select name="vet_examinations_id" id="vet_examinations_id">
+            <a href="#" onclick="openModal('gettingModal')">Добавить получение</a>
+        </p>
+        <p>
+            <label>Ветеринарный осмотр:</label><br>
+            <select name="vet_examinations_id">
                 <option value="">-- Выберите --</option>
                 {% for vet in vet_examinations %}
-                <option value="{{ vet.id }}">{{ vet.examination_date }}</option>
+                <option value="{{ vet.id }}" {% if form_data.vet_examinations_id == vet.id|string %}selected{% endif %}>
+                    {{ vet.examination_date }}
+                </option>
                 {% endfor %}
             </select>
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#vetModal">Добавить</button><br />
-
-            <label for="coat_type">Тип шерсти:</label><br />
-            <select name="coat_type" id="coat_type">
+            <a href="#" onclick="openModal('vetModal')">Добавить осмотр</a>
+        </p>
+        <p>
+            <label>Тип шерсти:</label><br>
+            <select name="coat_type">
                 <option value="">-- Выберите --</option>
                 {% for ct in coat_types %}
-                <option value="{{ ct.id }}">{{ ct.coat_type_name }}</option>
+                <option value="{{ ct.id }}" {% if form_data.coat_type == ct.id|string %}selected{% endif %}>
+                    {{ ct.coat_type_name }}
+                </option>
                 {% endfor %}
             </select>
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#coatTypeModal">Добавить</button><br />
-
-            <label for="color_variations">Окрас:</label><br />
-            <select name="color_variations" id="color_variations">
+            <a href="#" onclick="openModal('coatTypeModal')">Добавить тип шерсти</a>
+        </p>
+        <p>
+            <label>Окрас:</label><br>
+            <select name="color_variations">
                 <option value="">-- Выберите --</option>
                 {% for cv in color_variations %}
-                <option value="{{ cv.id }}">{{ cv.color_variations_name }}</option>
+                <option value="{{ cv.id }}" {% if form_data.color_variations == cv.id|string %}selected{% endif %}>
+                    {{ cv.color_variations_name }}
+                </option>
                 {% endfor %}
             </select>
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#colorModal">Добавить</button><br />
-
-            <label for="temperament">Темперамент:</label><br />
-            <select name="temperament" id="temperament">
+            <a href="#" onclick="openModal('colorModal')">Добавить окрас</a>
+        </p>
+        <p>
+            <label>Темперамент:</label><br>
+            <select name="temperament">
                 <option value="">-- Выберите --</option>
                 {% for t in temperaments %}
-                <option value="{{ t.id }}">{{ t.temperament_name }}</option>
+                <option value="{{ t.id }}" {% if form_data.temperament == t.id|string %}selected{% endif %}>
+                    {{ t.temperament_name }}
+                </option>
                 {% endfor %}
             </select>
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#temperamentModal">Добавить</button><br />
-
-            <label for="size">Размер:</label><br />
-            <select name="size" id="size">
+            <a href="#" onclick="openModal('temperamentModal')">Добавить темперамент</a>
+        </p>
+        <p>
+            <label>Размер:</label><br>
+            <select name="size">
                 <option value="">-- Выберите --</option>
                 {% for s in sizes %}
-                <option value="{{ s.id }}">{{ s.size_name }}</option>
+                <option value="{{ s.id }}" {% if form_data.size == s.id|string %}selected{% endif %}>
+                    {{ s.size_name }}
+                </option>
                 {% endfor %}
             </select>
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#sizeModal">Добавить</button><br />
+            <a href="#" onclick="openModal('sizeModal')" class="add-size">Добавить размер</a>
+        </p>
+        <p>
+            <input type="submit" value="Добавить собаку">
+        </p>
+    </form>
 
-            <button type="submit">Добавить собаку</button>
+    <!-- Модальные окна -->
+    <div class="modal-overlay" id="modalOverlay"></div>
+
+    <div class="modal" id="breedModal">
+        <form id="breedForm">
+            <h3>Добавить породу</h3>
+            <p>
+                <label class="required">Название породы:</label><br>
+                <input type="text" name="breed_name">
+                <div class="example">Пример: Лабрадор</div>
+            </p>
+            <p>
+                <label>Группа породы:</label><br>
+                <input type="text" name="breed_group">
+                <div class="example">Пример: Ретриверы</div>
+            </p>
+            <p>
+                <label>Страна происхождения:</label><br>
+                <select name="origin_country">
+                    <option value="">-- Выберите страну --</option>
+                    <option value="Россия">Россия</option>
+                    <option value="Германия">Германия</option>
+                    <option value="США">США</option>
+                    <option value="Франция">Франция</option>
+                    <option value="Япония">Япония</option>
+                    <option value="Великобритания">Великобритания</option>
+                    <option value="Австралия">Австралия</option>
+                    <!-- Добавить другие страны по необходимости -->
+                </select>
+            </p>
+            <p>
+                <label>Средняя продолжительность жизни:</label><br>
+                <input type="number" name="average_lifes">
+                <div class="example">Пример: 12 лет</div>
+            </p>
+            <p>
+                <label>Средний вес самцов:</label><br>
+                <input type="number" name="average_weight_male">
+                <div class="example">Пример: 30 кг</div>
+            </p>
+            <p>
+                <label>Средний вес самок:</label><br>
+                <input type="number" name="average_weight_female">
+                <div class="example">Пример: 25 кг</div>
+            </p>
+            <p>
+                <input type="button" value="Сохранить" onclick="saveBreed()">
+                <input type="button" value="Закрыть" onclick="closeModal('breedModal')">
+            </p>
         </form>
+    </div>
 
-        <!-- Модальное окно для породы -->
-        <div class="modal fade" id="breedModal" tabindex="-1" role="dialog" aria-labelledby="breedModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="breedModalLabel">Добавить породу</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <label for="breed_name">Название породы:</label>
-                        <input type="text" id="breed_name" class="form-control" /><br />
-                        <label for="breed_group">Группа породы:</label>
-                        <input type="text" id="breed_group" class="form-control" /><br />
-                        <label for="origin_country">Страна происхождения:</label>
-                        <input type="text" id="origin_country" class="form-control" /><br />
-                        <label for="average_lifes">Средняя продолжительность жизни:</label>
-                        <input type="number" id="average_lifes" class="form-control" /><br />
-                        <label for="typical_use">Типичное использование:</label>
-                        <input type="text" id="typical_use" class="form-control" /><br />
-                        <label for="common_health_issues">Проблемы со здоровьем:</label>
-                        <input type="text" id="common_health_issues" class="form-control" /><br />
-                        <label for="recommended_vaccinations">Рекомендуемые вакцинации:</label>
-                        <input type="text" id="recommended_vaccinations" class="form-control" /><br />
-                        <label for="veterinary_care">Ветеринарный уход:</label>
-                        <input type="text" id="veterinary_care" class="form-control" /><br />
-                        <label for="average_weight_male">Средний вес самцов:</label>
-                        <input type="number" id="average_weight_male" class="form-control" /><br />
-                        <label for="average_weight_female">Средний вес самок:</label>
-                        <input type="number" id="average_weight_female" class="form-control" /><br />
-                        <label for="trainability_level">Уровень обучаемости:</label>
-                        <input type="text" id="trainability_level" class="form-control" /><br />
-                        <label for="recommended_training_age">Возраст начала дрессировки:</label>
-                        <input type="number" id="recommended_training_age" class="form-control" /><br />
-                        <label for="common_behavioral_issues">Поведенческие проблемы:</label>
-                        <input type="text" id="common_behavioral_issues" class="form-control" /><br />
-                        <label for="preferred_training_methods">Методы дрессировки:</label>
-                        <input type="text" id="preferred_training_methods" class="form-control" /><br />
-                        <label for="typical_learning_period">Период обучения:</label>
-                        <input type="number" id="typical_learning_period" class="form-control" />
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
-                        <button type="button" class="btn btn-primary" onclick="addBreed()">Сохранить</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="modal" id="locationModal">
+        <form id="locationForm">
+            <h3>Добавить место</h3>
+            <p>
+                <label class="required">Название места:</label><br>
+                <input type="text" name="location_name">
+                <div class="example">Пример: Приют Счастливый Пес</div>
+            </p>
+            <p>
+                <label>Тип места:</label><br>
+                <input type="text" name="location_type">
+                <div class="example">Пример: Приют</div>
+            </p>
+            <p>
+                <label>Адрес:</label><br>
+                <input type="text" name="address">
+                <div class="example">Пример: ул. Лесная, 5, Москва</div>
+            </p>
+            <p>
+                <input type="button" value="Сохранить" onclick="saveLocation()">
+                <input type="button" value="Закрыть" onclick="closeModal('locationModal')">
+            </p>
+        </form>
+    </div>
 
-        <!-- Модальное окно для места размещения -->
-        <div class="modal fade" id="locationModal" tabindex="-1" role="dialog" aria-labelledby="locationModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="locationModalLabel">Добавить место</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <label for="location_name">Название места:</label>
-                        <input type="text" id="location_name" class="form-control" /><br />
-                        <label for="location_type">Тип места:</label>
-                        <input type="text" id="location_type" class="form-control" /><br />
-                        <label for="address">Адрес:</label>
-                        <input type="text" id="address" class="form-control" /><br />
-                        <label for="contact_info">Контактная информация:</label>
-                        <input type="text" id="contact_info" class="form-control" /><br />
-                        <label for="price">Стоимость:</label>
-                        <input type="number" id="price" class="form-control" /><br />
-                        <label for="availability">Количество собак:</label>
-                        <input type="number" id="availability" class="form-control" /><br />
-                        <label for="website">Сайт:</label>
-                        <input type="text" id="website" class="form-control" />
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
-                        <button type="button" class="btn btn-primary" onclick="addLocation()">Сохранить</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="modal" id="gettingModal">
+        <form id="gettingForm">
+            <h3>Добавить получение</h3>
+            <p>
+                <label class="required">Кем передана:</label><br>
+                <input type="text" name="getting_by">
+                <div class="example">Пример: Иванов И.И.</div>
+            </p>
+            <p>
+                <label>Контактная информация:</label><br>
+                <input type="text" name="contact_info">
+                <div class="example">Пример: +7 900 123-45-67</div>
+            </p>
+            <p>
+                <input type="button" value="Сохранить" onclick="saveGetting()">
+                <input type="button" value="Закрыть" onclick="closeModal('gettingModal')">
+            </p>
+        </form>
+    </div>
 
-        <!-- Модальное окно для получения -->
-        <div class="modal fade" id="gettingModal" tabindex="-1" role="dialog" aria-labelledby="gettingModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="gettingModalLabel">Добавить получение</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <label for="getting_by">Кем передана:</label>
-                        <input type="text" id="getting_by" class="form-control" /><br />
-                        <label for="contact_info">Контактная информация:</label>
-                        <input type="text" id="contact_info" class="form-control" /><br />
-                        <label for="getting_type">Тип передачи:</label>
-                        <input type="text" id="getting_type" class="form-control" /><br />
-                        <label for="reason">Причина передачи:</label>
-                        <input type="text" id="reason" class="form-control" />
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
-                        <button type="button" class="btn btn-primary" onclick="addGetting()">Сохранить</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="modal" id="vetModal">
+        <form id="vetForm">
+            <h3>Добавить осмотр</h3>
+            <p>
+                <label class="required">Дата осмотра:</label><br>
+                <input type="date" name="examination_date">
+                <div class="example">Пример: 2023-11-01</div>
+            </p>
+            <p>
+                <label>Имя ветеринара:</label><br>
+                <input type="text" name="veterinarian_name">
+                <div class="example">Пример: Петров А.А.</div>
+            </p>
+            <p>
+                <input type="button" value="Сохранить" onclick="saveVetExamination()">
+                <input type="button" value="Закрыть" onclick="closeModal('vetModal')">
+            </p>
+        </form>
+    </div>
 
-        <!-- Модальное окно для ветеринарного осмотра -->
-        <div class="modal fade" id="vetModal" tabindex="-1" role="dialog" aria-labelledby="vetModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="vetModalLabel">Добавить осмотр</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <label for="examination_date">Дата осмотра:</label>
-                        <input type="date" id="examination_date" class="form-control" /><br />
-                        <label for="veterinarian_name">Имя ветеринара:</label>
-                        <input type="text" id="veterinarian_name" class="form-control" /><br />
-                        <label for="diagnosis">Диагноз:</label>
-                        <input type="text" id="diagnosis" class="form-control" /><br />
-                        <label for="treatment">Лечение:</label>
-                        <input type="text" id="treatment" class="form-control" /><br />
-                        <label for="next_examination_date">Дата следующего осмотра:</label>
-                        <input type="date" id="next_examination_date" class="form-control" />
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
-                        <button type="button" class="btn btn-primary" onclick="addVetExamination()">Сохранить</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="modal" id="coatTypeModal">
+        <form id="coatTypeForm">
+            <h3>Добавить тип шерсти</h3>
+            <p>
+                <label class="required">Название типа шерсти:</label><br>
+                <input type="text" name="coat_type_name">
+                <div class="example">Пример: Короткая</div>
+            </p>
+            <p>
+                <input type="button" value="Сохранить" onclick="saveCoatType()">
+                <input type="button" value="Закрыть" onclick="closeModal('coatTypeModal')">
+            </p>
+        </form>
+    </div>
 
-<!-- Модальное окно для типа шерсти -->
-        <div class="modal fade" id="coatTypeModal" tabindex="-1" role="dialog" aria-labelledby="coatTypeModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="coatTypeModalLabel">Добавить тип шерсти</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <label for="coat_type_name">Название типа шерсти:</label>
-                        <input type="text" id="coat_type_name" class="form-control" />
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
-                        <button type="button" class="btn btn-primary" onclick="addCoatType()">Сохранить</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="modal" id="colorModal">
+        <form id="colorForm">
+            <h3>Добавить окрас</h3>
+            <p>
+                <label class="required">Название окраса:</label><br>
+                <input type="text" name="color_variations_name">
+                <div class="example">Пример: Черный</div>
+            </p>
+            <p>
+                <input type="button" value="Сохранить" onclick="saveColor()">
+                <input type="button" value="Закрыть" onclick="closeModal('colorModal')">
+            </p>
+        </form>
+    </div>
 
-        <!-- Модальное окно для окраса -->
-        <div class="modal fade" id="colorModal" tabindex="-1" role="dialog" aria-labelledby="colorModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="colorModalLabel">Добавить окрас</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <label for="color_variations_name">Название окраса:</label>
-                        <input type="text" id="color_variations_name" class="form-control" />
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
-                        <button type="button" class="btn btn-primary" onclick="addColor()">Сохранить</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="modal" id="temperamentModal">
+        <form id="temperamentForm">
+            <h3>Добавить темперамент</h3>
+            <p>
+                <label class="required">Название темперамента:</label><br>
+                <input type="text" name="temperament_name">
+                <div class="example">Пример: Спокойный</div>
+            </p>
+            <p>
+                <input type="button" value="Сохранить" onclick="saveTemperament()">
+                <input type="button" value="Закрыть" onclick="closeModal('temperamentModal')">
+            </p>
+        </form>
+    </div>
 
-        <!-- Модальное окно для темперамента -->
-        <div class="modal fade" id="temperamentModal" tabindex="-1" role="dialog" aria-labelledby="temperamentModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="temperamentModalLabel">Добавить темперамент</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <label for="temperament_name">Название темперамента:</label>
-                        <input type="text" id="temperament_name" class="form-control" />
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
-                        <button type="button" class="btn btn-primary" onclick="addTemperament()">Сохранить</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="modal" id="sizeModal">
+        <form id="sizeForm">
+            <h3>Добавить размер</h3>
+            <p>
+                <label class="required">Название размера:</label><br>
+                <input type="text" name="size_name">
+                <div class="example">Пример: Средний</div>
+            </p>
+            <p>
+                <input type="button" value="Сохранить" onclick="saveSize()">
+                <input type="button" value="Закрыть" onclick="closeModal('sizeModal')">
+            </p>
+        </form>
+    </div>
 
-        <!-- Модальное окно для размера -->
-        <div class="modal fade" id="sizeModal" tabindex="-1" role="dialog" aria-labelledby="sizeModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="sizeModalLabel">Добавить размер</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <label for="size_name">Название размера:</label>
-                        <input type="text" id="size_name" class="form-control" />
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
-                        <button type="button" class="btn btn-primary" onclick="addSize()">Сохранить</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <script>
+        function openModal(modalId) {
+            // Сохранить данные формы
+            const form = document.querySelector('form');
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => { data[key] = value; });
+            sessionStorage.setItem('formData', JSON.stringify(data));
+            // Показать модальное окно
+            document.getElementById('modalOverlay').style.display = 'block';
+            document.getElementById(modalId).style.display = 'block';
+        }
 
-        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-        <script>
-            function addBreed() {
-                var data = {
-                    breed_name: document.getElementById("breed_name").value.trim(),
-                    breed_group: document.getElementById("breed_group").value.trim(),
-                    origin_country: document.getElementById("origin_country").value.trim(),
-                    average_lifes: document.getElementById("average_lifes").value.trim(),
-                    typical_use: document.getElementById("typical_use").value.trim(),
-                    common_health_issues: document.getElementById("common_health_issues").value.trim(),
-                    recommended_vaccinations: document.getElementById("recommended_vaccinations").value.trim(),
-                    veterinary_care: document.getElementById("veterinary_care").value.trim(),
-                    average_weight_male: document.getElementById("average_weight_male").value.trim(),
-                    average_weight_female: document.getElementById("average_weight_female").value.trim(),
-                    trainability_level: document.getElementById("trainability_level").value.trim(),
-                    recommended_training_age: document.getElementById("recommended_training_age").value.trim(),
-                    common_behavioral_issues: document.getElementById("common_behavioral_issues").value.trim(),
-                    preferred_training_methods: document.getElementById("preferred_training_methods").value.trim(),
-                    typical_learning_period: document.getElementById("typical_learning_period").value.trim()
-                };
-                if (data.breed_name) {
-                    fetch("/add_breed", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(data),
-                    })
-                        .then((response) => response.json())
-                        .then((data) => {
-                            if (data.success) {
-                                var select = document.getElementById("breeds_id");
-                                var option = document.createElement("option");
-                                option.value = data.id;
-                                option.text = data.breed_name;
-                                select.appendChild(option);
-                                select.value = data.id;
-                                $("#breedModal").modal("hide");
-                            } else {
-                                alert("Ошибка: " + data.error);
-                            }
-                        });
-                }
+        function closeModal(modalId) {
+            // Скрыть модальное окно
+            document.getElementById(modalId).style.display = 'none';
+            document.getElementById('modalOverlay').style.display = 'none';
+            // Восстановить данные формы
+            const savedData = sessionStorage.getItem('formData');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                const form = document.querySelector('form');
+                Object.keys(data).forEach(key => {
+                    const input = form.querySelector(`[name="${key}"]`);
+                    if (input) {
+                        if (input.tagName === 'SELECT') {
+                            const option = input.querySelector(`option[value="${data[key]}"]`);
+                            if (option) option.selected = true;
+                        } else {
+                            input.value = data[key];
+                        }
+                    }
+                });
             }
+        }
 
-            function addLocation() {
-                var data = {
-                    location_name: document.getElementById("location_name").value.trim(),
-                    location_type: document.getElementById("location_type").value.trim(),
-                    address: document.getElementById("address").value.trim(),
-                    contact_info: document.getElementById("contact_info").value.trim(),
-                    price: document.getElementById("price").value.trim(),
-                    availability: document.getElementById("availability").value.trim(),
-                    website: document.getElementById("website").value.trim()
-                };
-                if (data.location_name) {
-                    fetch("/add_location", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(data),
-                    })
-                        .then((response) => response.json())
-                        .then((data) => {
-                            if (data.success) {
-                                var select = document.getElementById("location_id");
-                                var option = document.createElement("option");
-                                option.value = data.id;
-                                option.text = data.location_name;
-                                select.appendChild(option);
-                                select.value = data.id;
-                                $("#locationModal").modal("hide");
-                            } else {
-                                alert("Ошибка: " + data.error);
-                            }
-                        });
+        function saveBreed() {
+            const form = document.getElementById('breedForm');
+            const data = {
+                breed_name: form.breed_name.value,
+                breed_group: form.breed_group.value,
+                origin_country: form.origin_country.value,
+                average_lifes: form.average_lifes.value || null,
+                average_weight_male: form.average_weight_male.value || null,
+                average_weight_female: form.average_weight_female.value || null
+            };
+            fetch('/add_breed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Порода добавлена');
+                    closeModal('breedModal');
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + result.error);
                 }
-            }
+            });
+        }
 
-            function addGetting() {
-                var data = {
-                    getting_by: document.getElementById("getting_by").value.trim(),
-                    contact_info: document.getElementById("contact_info").value.trim(),
-                    getting_type: document.getElementById("getting_type").value.trim(),
-                    reason: document.getElementById("reason").value.trim()
-                };
-                if (data.getting_by) {
-                    fetch("/add_getting", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(data),
-                    })
-                        .then((response) => response.json())
-                        .then((data) => {
-                            if (data.success) {
-                                var select = document.getElementById("getting_id");
-                                var option = document.createElement("option");
-                                option.value = data.id;
-                                option.text = data.getting_by;
-                                select.appendChild(option);
-                                select.value = data.id;
-                                $("#gettingModal").modal("hide");
-                            } else {
-                                alert("Ошибка: " + data.error);
-                            }
-                        });
+        function saveLocation() {
+            const form = document.getElementById('locationForm');
+            const data = {
+                location_name: form.location_name.value,
+                location_type: form.location_type.value,
+                address: form.address.value
+            };
+            fetch('/add_location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Место добавлено');
+                    closeModal('locationModal');
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + result.error);
                 }
-            }
+            });
+        }
 
-            function addVetExamination() {
-                var data = {
-                    examination_date: document.getElementById("examination_date").value,
-                    veterinarian_name: document.getElementById("veterinarian_name").value.trim(),
-                    diagnosis: document.getElementById("diagnosis").value.trim(),
-                    treatment: document.getElementById("treatment").value.trim(),
-                    next_examination_date: document.getElementById("next_examination_date").value
-                };
-                if (data.examination_date) {
-                    fetch("/add_vet_examination", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(data),
-                    })
-                        .then((response) => response.json())
-                        .then((data) => {
-                            if (data.success) {
-                                var select = document.getElementById("vet_examinations_id");
-                                var option = document.createElement("option");
-                                option.value = data.id;
-                                option.text = data.examination_date;
-                                select.appendChild(option);
-                                select.value = data.id;
-                                $("#vetModal").modal("hide");
-                            } else {
-                                alert("Ошибка: " + data.error);
-                            }
-                        });
+        function saveGetting() {
+            const form = document.getElementById('gettingForm');
+            const data = {
+                getting_by: form.getting_by.value,
+                contact_info: form.contact_info.value
+            };
+            fetch('/add_getting', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Получение добавлено');
+                    closeModal('gettingModal');
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + result.error);
                 }
-            }
-            function addCoatType() {
-                var data = {
-                    coat_type_name: document.getElementById("coat_type_name").value.trim()
-                };
-                if (data.coat_type_name) {
-                    fetch("/add_coat_type", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(data),
-                    })
-                        .then((response) => response.json())
-                        .then((data) => {
-                            if (data.success) {
-                                var select = document.getElementById("coat_type");
-                                var option = document.createElement("option");
-                                option.value = data.id;
-                                option.text = data.coat_type_name;
-                                select.appendChild(option);
-                                select.value = data.id;
-                                $("#coatTypeModal").modal("hide");
-                            } else {
-                                alert("Ошибка: " + data.error);
-                            }
-                        });
-                }
-            }
+            });
+        }
 
-            function addColor() {
-                var data = {
-                    color_variations_name: document.getElementById("color_variations_name").value.trim()
-                };
-                if (data.color_variations_name) {
-                    fetch("/add_color_variations", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(data),
-                    })
-                        .then((response) => response.json())
-                        .then((data) => {
-                            if (data.success) {
-                                var select = document.getElementById("color_variations");
-                                var option = document.createElement("option");
-                                option.value = data.id;
-                                option.text = data.color_variations_name;
-                                select.appendChild(option);
-                                select.value = data.id;
-                                $("#colorModal").modal("hide");
-                            } else {
-                                alert("Ошибка: " + data.error);
-                            }
-                        });
+        function saveVetExamination() {
+            const form = document.getElementById('vetForm');
+            const data = {
+                examination_date: form.examination_date.value,
+                veterinarian_name: form.veterinarian_name.value
+            };
+            fetch('/add_vet_examination', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Осмотр добавлен');
+                    closeModal('vetModal');
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + result.error);
                 }
-            }
+            });
+        }
 
-            function addTemperament() {
-                var data = {
-                    temperament_name: document.getElementById("temperament_name").value.trim()
-                };
-                if (data.temperament_name) {
-                    fetch("/add_temperament", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(data),
-                    })
-                        .then((response) => response.json())
-                        .then((data) => {
-                            if (data.success) {
-                                var select = document.getElementById("temperament");
-                                var option = document.createElement("option");
-                                option.value = data.id;
-                                option.text = data.temperament_name;
-                                select.appendChild(option);
-                                select.value = data.id;
-                                $("#temperamentModal").modal("hide");
-                            } else {
-                                alert("Ошибка: " + data.error);
-                            }
-                        });
+        function saveCoatType() {
+            const form = document.getElementById('coatTypeForm');
+            const data = { coat_type_name: form.coat_type_name.value };
+            fetch('/add_coat_type', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Тип шерсти добавлен');
+                    closeModal('coatTypeModal');
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + result.error);
                 }
-            }
+            });
+        }
 
-            function addSize() {
-                var data = {
-                    size_name: document.getElementById("size_name").value.trim()
-                };
-                if (data.size_name) {
-                    fetch("/add_size", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(data),
-                    })
-                        .then((response) => response.json())
-                        .then((data) => {
-                            if (data.success) {
-                                var select = document.getElementById("size");
-                                var option = document.createElement("option");
-                                option.value = data.id;
-                                option.text = data.size_name;
-                                select.appendChild(option);
-                                select.value = data.id;
-                                $("#sizeModal").modal("hide");
-                            } else {
-                                alert("Ошибка: " + data.error);
-                            }
-                        });
+        function saveColor() {
+            const form = document.getElementById('colorForm');
+            const data = { color_variations_name: form.color_variations_name.value };
+            fetch('/add_color_variations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Окрас добавлен');
+                    closeModal('colorModal');
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + result.error);
                 }
-            }
-        </script>
-    </body>
+            });
+        }
+
+        function saveTemperament() {
+            const form = document.getElementById('temperamentForm');
+            const data = { temperament_name: form.temperament_name.value };
+            fetch('/add_temperament', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Темперамент добавлен');
+                    closeModal('temperamentModal');
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + result.error);
+                }
+            });
+        }
+
+        function saveSize() {
+            const form = document.getElementById('sizeForm');
+            const data = { size_name: form.size_name.value };
+            fetch('/add_size', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Размер добавлен');
+                    closeModal('sizeModal');
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + result.error);
+                }
+            });
+        }
+    </script>
+</body>
 </html>
