@@ -418,96 +418,107 @@ def get_values():
         query = f"SELECT DISTINCT {attribute} FROM {table} ORDER BY {attribute}"
         values = [row[attribute] for row in cursor.execute(query).fetchall()]
     return jsonify(values)
+@app.route('/search_name')
+def search_name():
+    with get_db_connection() as conn:
+        dog_names = [row['name'] for row in conn.execute("SELECT DISTINCT name FROM dogs ORDER BY name").fetchall()]
+    return render_template('search_name.html', dog_names=dog_names)
 
+@app.route('/search_breed_location')
+def search_breed_location():
+    with get_db_connection() as conn:
+        breeds = [row['breed_name'] for row in conn.execute("SELECT DISTINCT breed_name FROM breeds ORDER BY breed_name").fetchall()]
+    return render_template('search_breed_location.html', breeds=breeds)
+
+@app.route('/get_dog_by_name')
+def get_dog_by_name():
+    name = request.args.get('name')
+    if not name:
+        return jsonify([])
+    with get_db_connection() as conn:
+        dogs = conn.execute("""
+            SELECT d.id, d.name, b.breed_name, l.location_name, d.birth_date, d.registration_date, d.microchip_number
+            FROM dogs d
+            JOIN breeds b ON d.breeds_id = b.id
+            JOIN locations l ON d.location_id = l.id
+            WHERE d.name = ?
+        """, (name,)).fetchall()
+        return jsonify([dict(row) for row in dogs])
+
+@app.route('/get_locations_by_breed')
+def get_locations_by_breed():
+    breed = request.args.get('breed')
+    if not breed:
+        return jsonify([])
+    with get_db_connection() as conn:
+        locations = conn.execute("""
+            SELECT DISTINCT l.location_name
+            FROM locations l
+            JOIN dogs d ON d.location_id = l.id
+            JOIN breeds b ON d.breeds_id = b.id
+            WHERE b.breed_name = ?
+            ORDER BY l.location_name
+        """, (breed,)).fetchall()
+        return jsonify([row['location_name'] for row in locations])
+
+@app.route('/get_dogs_by_breed_location')
+def get_dogs_by_breed_location():
+    breed = request.args.get('breed')
+    location = request.args.get('location')
+    if not breed or not location:
+        return jsonify([])
+    with get_db_connection() as conn:
+        dogs = conn.execute("""
+            SELECT d.id, d.name, b.breed_name, l.location_name, d.birth_date, d.registration_date, d.microchip_number
+            FROM dogs d
+            JOIN breeds b ON d.breeds_id = b.id
+            JOIN locations l ON d.location_id = l.id
+            WHERE b.breed_name = ? AND l.location_name = ?
+        """, (breed, location)).fetchall()
+        return jsonify([dict(row) for row in dogs])
+        
 @app.route('/get_filtered_values', methods=['GET', 'POST'])
 def get_filtered_values():
+    # Handle both POST and GET requests uniformly
     if request.method == 'POST':
         table1 = request.form.get('table1')
         attr1 = request.form.get('attr1')
-        value1 = request.form.get('value1')
+        value1 = request.form.get('value1')  
         table2 = request.form.get('table2')
         attr2 = request.form.get('attr2')
-
-        if not all([table1, attr1, value1, table2, attr2]):
-            return jsonify({'error': 'Все параметры должны быть указаны'}), 400
-
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            if table1 == 'breeds' and table2 == 'dogs' and attr1 == 'id' and attr2 == 'name':
-                query = """
-                    SELECT DISTINCT d.name
-                    FROM dogs d
-                    JOIN breeds b ON d.breeds_id = b.id
-                    WHERE b.id = ?
-                    ORDER BY d.name
-                """
-                values = [row['name'] for row in cursor.execute(query, (value1,)).fetchall()]
-            else:
-                table_relationships = {
-                    ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
-                    ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
-                    ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
-                    ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
-                    ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
-                    ('breeds', 'vet_examinations'): ('b', 've', 'JOIN dogs d ON d.breeds_id = b.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
-                }
-                if (table1, table2) in table_relationships:
-                    alias0, alias1, join_condition = table_relationships[(table1, table2)]
-                    query = f"""
-                        SELECT DISTINCT {alias1}.{attr2}
-                        FROM {table1} {alias0}
-                        {join_condition}
-                        WHERE {alias0}.{attr1} = ?
-                        ORDER BY {alias1}.{attr2}
-                    """
-                    values = [row[attr2] for row in cursor.execute(query, (value1,)).fetchall()]
-                else:
-                    return jsonify({'error': f'Нет связи между {table1} и {table2}'}), 400
-            return jsonify(values)
-
-    else:
-        table0 = request.args.get('table0')
+    else:  # GET request
         table1 = request.args.get('table1')
-        first_attr = request.args.get('first_attr')
-        first_value = request.args.get('first_value')
-        second_attr = request.args.get('second_attr')
+        attr1 = request.args.get('attr1')
+        value1 = request.args.get('value1')
+        table2 = request.args.get('table2')
+        attr2 = request.args.get('attr2')
 
-        if not all([table0, first_attr, first_value, second_attr]):
-            return jsonify({'error': 'Все обязательные параметры должны быть указаны'}), 400
+    # Log the received parameters for debugging
+    logger.info(f"Received parameters: table1={table1}, attr1={attr1}, value1={value1}, table2={table2}, attr2={attr2}")
 
-        table_relationships = {
-            ('breeds', 'dogs'): ('b', 'd', 'JOIN dogs d ON d.breeds_id = b.id'),
-            ('dogs', 'vet_examinations'): ('d', 've', 'JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
-            ('dogs', 'locations'): ('d', 'l', 'JOIN locations l ON d.location_id = l.id'),
-            ('dogs', 'getting'): ('d', 'g', 'JOIN getting g ON d.getting_id = g.id'),
-            ('breeds', 'locations'): ('b', 'l', 'JOIN dogs d ON d.breeds_id = b.id JOIN locations l ON d.location_id = l.id'),
-            ('breeds', 'vet_examinations'): ('b', 've', 'JOIN dogs d ON d.breeds_id = b.id JOIN vet_examinations ve ON d.vet_examinations_id = ve.id'),
-        }
+    # Check if all required parameters are provided
+    if not all([table1, attr1, value1, table2, attr2]):
+        return jsonify({'error': 'Все параметры должны быть указаны'}), 400
 
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            if table1 and (table0, table1) in table_relationships:
-                alias0, alias1, join_condition = table_relationships[(table0, table1)]
-                query = f"""
-                    SELECT DISTINCT {alias1}.{second_attr}
-                    FROM {table0} {alias0}
-                    {join_condition}
-                    WHERE {alias0}.{first_attr} = ?
-                    ORDER BY {alias1}.{second_attr}
-                """
-            else:
-                query = f"""
-                    SELECT DISTINCT {second_attr}
-                    FROM {table0}
-                    WHERE {first_attr} = ?
-                    ORDER BY {second_attr}
-                """
-
-            try:
-                values = [row[0] for row in cursor.execute(query, (first_value,)).fetchall()]
-                return jsonify(values)
-            except sqlite3.OperationalError as e:
-                return jsonify({'error': str(e)}), 500
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if table1 == 'breeds' and table2 == 'locations' and attr1 == 'breed_name' and attr2 == 'location_name':
+            # Query to get distinct locations for the selected breed
+            query = """
+                SELECT DISTINCT l.location_name
+                FROM locations l
+                JOIN dogs d ON d.location_id = l.id
+                JOIN breeds b ON d.breeds_id = b.id
+                WHERE b.breed_name = ?
+                ORDER BY l.location_name
+            """
+            logger.info(f"Executing query: {query} with parameter: {value1}")
+            values = [row['location_name'] for row in cursor.execute(query, (value1,)).fetchall()]
+            logger.info(f"Query returned: {values}")
+        else:
+            # Handle other combinations or return an error
+            return jsonify({'error': f'Неподдерживаемая комбинация таблиц: {table1} и {table2}'}), 400
+        return jsonify(values)
 
 @app.route('/add_coat_type', methods=['POST'])
 def add_coat_type():
@@ -990,7 +1001,91 @@ def add_vet_examination():
         conn.commit()
         vet_id = cursor.lastrowid
     return jsonify({'success': True, 'id': vet_id, 'examination_date': examination_date})
+# Поиск собак по имени
+@app.route('/search_by_name', methods=['GET', 'POST'])
+def search_by_name():
+    results = None
+    name = None
+    no_results = False
 
+    with get_db_connection() as conn:
+        dog_names = [row['name'] for row in conn.execute("SELECT DISTINCT name FROM dogs ORDER BY name").fetchall()]
+
+        if request.method == 'POST':
+            name = request.form.get('name', '').strip()
+
+            query = """
+                SELECT d.id, d.name, b.breed_name, l.location_name, d.birth_date, d.registration_date, d.microchip_number
+                FROM dogs d
+                JOIN breeds b ON d.breeds_id = b.id
+                JOIN locations l ON d.location_id = l.id
+                WHERE 1=1
+            """
+            params = []
+
+            if name:
+                query += " AND d.name = ?"
+                params.append(name)
+
+            results = conn.execute(query, params).fetchall()
+            print(f"Search by name query executed with params: {params}")
+            if not results:
+                no_results = True
+
+    return render_template('search.html', name_results=results, name=name, no_name_results=no_results, dog_names=dog_names)
+
+# Поиск собак по породе и месту размещения
+@app.route('/search_by_breed_location', methods=['GET', 'POST'])
+def search_by_breed_location():
+    results = None
+    breed_name = None
+    location_name = None
+    no_results = False
+
+    with get_db_connection() as conn:
+        breeds = [row['breed_name'] for row in conn.execute("SELECT DISTINCT breed_name FROM breeds ORDER BY breed_name").fetchall()]
+        # Fetch all locations initially
+        locations = [row['location_name'] for row in conn.execute("SELECT DISTINCT location_name FROM locations ORDER BY location_name").fetchall()]
+
+        if request.method == 'POST':
+            breed_name = request.form.get('breed_name', '').strip()
+            location_name = request.form.get('location_name', '').strip()
+
+            # Update locations based on selected breed
+            if breed_name:
+                locations = [row['location_name'] for row in conn.execute("""
+                    SELECT DISTINCT l.location_name
+                    FROM dogs d
+                    JOIN breeds b ON d.breeds_id = b.id
+                    JOIN locations l ON d.location_id = l.id
+                    WHERE b.breed_name = ?
+                    ORDER BY l.location_name
+                """, (breed_name,)).fetchall()]
+
+            query = """
+                SELECT d.id, d.name, b.breed_name, l.location_name, d.birth_date, d.registration_date, d.microchip_number
+                FROM dogs d
+                JOIN breeds b ON d.breeds_id = b.id
+                JOIN locations l ON d.location_id = l.id
+                WHERE 1=1
+            """
+            params = []
+
+            if breed_name:
+                query += " AND b.breed_name = ?"
+                params.append(breed_name)
+            if location_name:
+                query += " AND l.location_name = ?"
+                params.append(location_name)
+
+            results = conn.execute(query, params).fetchall()
+            print(f"Search by breed/location query executed with params: {params}")
+            if not results:
+                no_results = True
+
+    return render_template('search.html', breed_location_results=results, breed_name=breed_name, location_name=location_name,
+                           no_breed_location_results=no_results, breeds=breeds, locations=locations)
+                           
 @app.route('/add_detailed', methods=['GET', 'POST'])
 def add_detailed():
     errors = []

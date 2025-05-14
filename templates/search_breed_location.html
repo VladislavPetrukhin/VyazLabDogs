@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Поиск по породе и месту размещения</h1>
+<select id="breed_select">
+    <option value="">Выберите породу</option>
+    {% for breed in breeds %}
+    <option value="{{ breed }}">{{ breed }}</option>
+    {% endfor %}
+</select>
+<select id="location_select">
+    <option value="">Выберите место</option>
+</select>
+<div id="result"></div>
+
+<script>
+function generateDogTable(dogs) {
+    if (dogs.length === 0) return '<p>Собаки не найдены.</p>';
+    let table = '<table><thead><tr><th>ID</th><th>Имя</th><th>Порода</th><th>Место</th><th>Дата рождения</th><th>Дата регистрации</th><th>Микрочип</th></tr></thead><tbody>';
+    dogs.forEach(dog => {
+        table += `<tr><td>${dog.id}</td><td>${dog.name}</td><td>${dog.breed_name}</td><td>${dog.location_name}</td><td>${dog.birth_date || 'Не указано'}</td><td>${dog.registration_date || 'Не указано'}</td><td>${dog.microchip_number || 'Не указано'}</td></tr>`;
+    });
+    table += '</tbody></table>';
+    return table;
+}
+
+const breedSelect = document.getElementById('breed_select');
+const locationSelect = document.getElementById('location_select');
+const resultDiv = document.getElementById('result');
+
+breedSelect.addEventListener('change', function() {
+    const selectedBreed = this.value;
+    if (selectedBreed) {
+        fetch(`/get_locations_by_breed?breed=${encodeURIComponent(selectedBreed)}`)
+            .then(response => response.json())
+            .then(data => {
+                locationSelect.innerHTML = '<option value="">Выберите место</option>';
+                data.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location;
+                    option.textContent = location;
+                    locationSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+    } else {
+        locationSelect.innerHTML = '<option value="">Выберите место</option>';
+    }
+    resultDiv.innerHTML = '';
+});
+
+locationSelect.addEventListener('change', function() {
+    const selectedLocation = this.value;
+    const selectedBreed = breedSelect.value;
+    if (selectedBreed && selectedLocation) {
+        fetch(`/get_dogs_by_breed_location?breed=${encodeURIComponent(selectedBreed)}&location=${encodeURIComponent(selectedLocation)}`)
+            .then(response => response.json())
+            .then(data => {
+                resultDiv.innerHTML = generateDogTable(data);
+            })
+            .catch(error => console.error('Error:', error));
+    } else {
+        resultDiv.innerHTML = '';
+    }
+});
+</script>
+{% endblock %}

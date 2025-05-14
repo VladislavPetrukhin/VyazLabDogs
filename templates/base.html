@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Поиск собак</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+ <nav>
+        <a href="/">Главная</a> |
+        <a href="/add_detailed">Добавить</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="{{ url_for('search_name') }}">Поиск по имени</a>|
+<a href="{{ url_for('search_breed_location') }}">Поиск по породе и месту</a>
+    </nav>
+    <div>
+        {% block content %}
+        {% endblock %}
+    </div>
+</body>
+</html>

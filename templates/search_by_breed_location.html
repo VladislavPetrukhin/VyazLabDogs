@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Поиск по породе и месту</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        nav { margin-bottom: 20px; }
+        nav a { margin-right: 10px; }
+        form { margin-bottom: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .no-results { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Поиск по породе и месту</h1>
+ <nav>
+        <a href="/">Главная</a> |
+        <a href="/add_detailed">Добавить</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="{{ url_for('search_name') }}">Поиск по имени</a>|
+<a href="{{ url_for('search_breed_location') }}">Поиск по породе и месту</a>
+    </nav>
+
+    <form method="POST" action="{{ url_for('search') }}">
+        <input type="hidden" name="search_type" value="breed_location">
+        <label for="breed_name">Порода:</label>
+        <select name="breed_name" id="breed_name">
+            <option value="">-- Выберите породу --</option>
+            {% for breed in breeds %}
+                <option value="{{ breed }}" {% if breed_name == breed %}selected{% endif %}>{{ breed }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="location_name">Место размещения:</label>
+        <select name="location_name" id="location_name">
+            <option value="">-- Выберите место --</option>
+            {% for location in locations %}
+                <option value="{{ location }}" {% if location_name == location %}selected{% endif %}>{{ location }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Поиск</button>
+    </form>
+
+    {% if breed_location_no_results %}
+        <p class="no-results">Ничего не найдено</p>
+    {% endif %}
+
+    {% if breed_location_results %}
+        <h2>Результаты поиска</h2>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Имя</th>
+                <th>Порода</th>
+                <th>Место размещения</th>
+                <th>Дата рождения</th>
+                <th>Дата регистрации</th>
+                <th>Номер микрочипа</th>
+            </tr>
+            {% for dog in breed_location_results %}
+                <tr>
+                    <td>{{ dog.id }}</td>
+                    <td>{{ dog.name }}</td>
+                    <td>{{ dog.breed_name }}</td>
+                    <td>{{ dog.location_name }}</td>
+                    <td>{{ dog.birth_date }}</td>
+                    <td>{{ dog.registration_date }}</td>
+                    <td>{{ dog.microchip_number }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+</body>
+</html>

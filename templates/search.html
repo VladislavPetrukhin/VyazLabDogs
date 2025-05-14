@@ -2,111 +2,264 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Поиск собак</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon_dog.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .search-section {
+            margin-bottom: 40px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select, input[type="submit"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 300px;
+        }
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            width: auto;
+        }
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .no-results, .no-data {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .nav-links {
+            margin-bottom: 20px;
+        }
+        .nav-links a {
+            margin-right: 10px;
+            text-decoration: none;
+            color: #007BFF;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-    <h1>Поиск собак</h1>
-   <nav>
+    <nav>
         <a href="/">Главная</a> |
         <a href="/add_detailed">Добавить</a> |
         <a href="/stats">Статистика</a> |
-        <a href="/search">Поиск</a>
+        <a href="{{ url_for('search_name') }}">Поиск по имени</a>|
+<a href="{{ url_for('search_breed_location') }}">Поиск по породе и месту</a>
     </nav>
 
-    <form method="POST" id="searchForm">
-        <label for="name">Имя собаки:</label>
-        <select id="name" name="name">
-            <option value="">-- Выберите имя --</option>
-            {% for dog_name in dog_names %}
-                <option value="{{ dog_name }}" {% if dog_name == name %}selected{% endif %}>{{ dog_name }}</option>
-            {% endfor %}
-        </select>
-        <br>
+    <h1>Поиск собак</h1>
 
-        <label for="breed_name">Порода:</label>
-        <select id="breed_name" name="breed_name" onchange="updateLocations()">
-            <option value="">-- Выберите породу --</option>
-            {% for breed in breeds %}
-                <option value="{{ breed }}" {% if breed == breed_name %}selected{% endif %}>{{ breed }}</option>
-            {% endfor %}
-        </select>
-        <br>
+    <!-- Поиск по имени -->
+    <div class="search-section">
+        <h2>Поиск по имени собаки</h2>
+        <form method="POST" action="{{ url_for('search_by_name') }}">
+            <div class="form-group">
+                <label for="name">Имя собаки:</label>
+                <select name="name" id="name">
+                    <option value="">Выберите имя</option>
+                    {% for dog_name in dog_names %}
+                        <option value="{{ dog_name }}" {% if dog_name == name %}selected{% endif %}>{{ dog_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <input type="submit" value="Поиск">
+        </form>
 
-        <label for="location_name">Место размещения:</label>
-        <select id="location_name" name="location_name" onchange="submitIfBothSelected()">
-            <option value="">-- Выберите место --</option>
-            {% if locations %}
-                {% for location in locations %}
-                    <option value="{{ location }}" {% if location == location_name %}selected{% endif %}>{{ location }}</option>
-                {% endfor %}
-            {% endif %}
-        </select>
-        <br>
+        {% if dog_names is not defined or dog_names|length == 0 %}
+            <p class="no-data">Нет доступных имен собак. Проверьте базу данных.</p>
+        {% endif %}
 
-        <button type="submit">Поиск</button>
-    </form>
+        {% if name_results %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Имя</th>
+                        <th>Порода</th>
+                        <th>Место размещения</th>
+                        <th>Дата рождения</th>
+                        <th>Дата регистрации</th>
+                        <th>Номер микрочипа</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in name_results %}
+                        <tr>
+                            <td>{{ result.id }}</td>
+                            <td>{{ result.name }}</td>
+                            <td>{{ result.breed_name }}</td>
+                            <td>{{ result.location_name }}</td>
+                            <td>{{ result.birth_date or 'Не указано' }}</td>
+                            <td>{{ result.registration_date or 'Не указано' }}</td>
+                            <td>{{ result.microchip_number or 'Не указано' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
 
-    {% if no_results %}
-        <p>Ничего не найдено</p>
-    {% endif %}
+        {% if no_name_results %}
+            <p class="no-results">Собаки с указанным именем не найдены.</p>
+        {% endif %}
+    </div>
 
-    {% if results %}
-        <h2>Результаты поиска</h2>
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Имя</th>
-                <th>Порода</th>
-                <th>Место размещения</th>
-                <th>Дата рождения</th>
-                <th>Дата регистрации</th>
-                <th>Номер микрочипа</th>
-            </tr>
-            {% for dog in results %}
-                <tr>
-                    <td>{{ dog.id }}</td>
-                    <td>{{ dog.name }}</td>
-                    <td>{{ dog.breed_name }}</td>
-                    <td>{{ dog.location_name }}</td>
-                    <td>{{ dog.birth_date }}</td>
-                    <td>{{ dog.registration_date }}</td>
-                    <td>{{ dog.microchip_number }}</td>
-                </tr>
-            {% endfor %}
-        </table>
-    {% endif %}
+    <!-- Поиск по породе и месту размещения -->
+    <div class="search-section">
+        <h2>Поиск по породе и месту размещения</h2>
+        <form method="POST" action="{{ url_for('search_by_breed_location') }}">
+            <div class="form-group">
+                <label for="breed_name">Порода:</label>
+                <select name="breed_name" id="breed_name" onchange="updateLocations()">
+                    <option value="">Выберите породу</option>
+                    {% for breed in breeds %}
+                        <option value="{{ breed }}" {% if breed == breed_name %}selected{% endif %}>{{ breed }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="location_name">Место размещения:</label>
+                <select name="location_name" id="location_name">
+                    <option value="">Выберите место</option>
+                    {% for location in locations %}
+                        <option value="{{ location }}" {% if location == location_name %}selected{% endif %}>{{ location }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <input type="submit" value="Поиск">
+        </form>
+
+        {% if breeds is not defined or breeds|length == 0 %}
+            <p class="no-data">Нет доступных пород. Проверьте базу данных.</p>
+        {% endif %}
+
+        {% if locations is not defined or locations|length == 0 and breed_name is not defined %}
+            <p class="no-data">Нет доступных мест размещения. Проверьте базу данных.</p>
+        {% endif %}
+
+        {% if breed_location_results %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Имя</th>
+                        <th>Порода</th>
+                        <th>Место размещения</th>
+                        <th>Дата рождения</th>
+                        <th>Дата регистрации</th>
+                        <th>Номер микрочипа</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in breed_location_results %}
+                        <tr>
+                            <td>{{ result.id }}</td>
+                            <td>{{ result.name }}</td>
+                            <td>{{ result.breed_name }}</td>
+                            <td>{{ result.location_name }}</td>
+                            <td>{{ result.birth_date or 'Не указано' }}</td>
+                            <td>{{ result.registration_date or 'Не указано' }}</td>
+                            <td>{{ result.microchip_number or 'Не указано' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        {% if no_breed_location_results %}
+            <p class="no-results">Собаки с указанными параметрами не найдены.</p>
+        {% endif %}
+    </div>
 
     <script>
         function updateLocations() {
-            const breed = document.getElementById('breed_name').value;
+            const breedSelect = document.getElementById('breed_name');
             const locationSelect = document.getElementById('location_name');
+            const breed = breedSelect.value;
 
-            // Сброс списка мест
-            locationSelect.innerHTML = '<option value="">-- Загрузка... --</option>';
+            // Очистка текущих опций
+            locationSelect.innerHTML = '<option value="">Выберите место</option>';
 
-            fetch(`/get_filtered_values?table0=breeds&first_attr=breed_name&first_value=${encodeURIComponent(breed)}&second_attr=location_name&table1=locations`)
-                .then(response => response.json())
-                .then(data => {
-                    locationSelect.innerHTML = '<option value="">-- Выберите место --</option>';
-                    data.forEach(loc => {
-                        const option = document.createElement('option');
-                        option.value = loc;
-                        option.text = loc;
-                        locationSelect.appendChild(option);
-                    });
-                });
-        }
-
-        function submitIfBothSelected() {
-            const breed = document.getElementById('breed_name').value;
-            const location = document.getElementById('location_name').value;
-            if (breed && location) {
-                document.getElementById('searchForm').submit();
+            let url;
+            if (breed) {
+                // Запрос мест для выбранной породы
+                url = `/get_filtered_values?table1=breeds&attr1=breed_name&value1=${encodeURIComponent(breed)}&table2=locations&attr2=location_name`;
+            } else {
+                // Запрос всех мест, если порода не выбрана
+                url = `/get_attribute_values?table=locations&attribute=location_name`;
             }
+
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Locations fetched:', data);
+                if (data.length === 0) {
+                    console.warn('No locations returned from server.');
+                }
+                data.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location;
+                    option.text = location;
+                    locationSelect.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching locations:', error);
+                alert('Ошибка при загрузке мест размещения. Проверьте консоль для деталей.');
+            });
         }
+
+        // Инициализация мест при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            updateLocations();
+        });
     </script>
 </body>
 </html>
-

@@ -19,3 +19,60 @@
 2025-05-13 23:52:05,254 - myapp - INFO - Logging setup completed. Application started.
 2025-05-13 23:52:18,711 - myapp - INFO - Added dog: dsfsdfdssd
 2025-05-13 23:52:18,728 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-14 23:28:54,702 - myapp - INFO - Logging setup completed. Application started.
+2025-05-14 23:37:16,182 - myapp - INFO - Logging setup completed. Application started.
+2025-05-14 23:39:01,651 - myapp - INFO - Logging setup completed. Application started.
+2025-05-14 23:42:16,674 - myapp - INFO - Logging setup completed. Application started.
+2025-05-14 23:43:05,292 - myapp - INFO - Logging setup completed. Application started.
+2025-05-14 23:45:49,170 - myapp - INFO - Logging setup completed. Application started.
+2025-05-14 23:45:54,973 - myapp - INFO - Received parameters: table1=breeds, attr1=breed_name, value1=Бульмастиф, table2=locations, attr2=location_name
+2025-05-14 23:45:54,974 - myapp - INFO - Executing query: 
+                SELECT DISTINCT l.location_name
+                FROM locations l
+                JOIN dogs d ON d.location_id = l.id
+                JOIN breeds b ON d.breeds_id = b.id
+                WHERE b.breed_name = ?
+                ORDER BY l.location_name
+             with parameter: Бульмастиф
+2025-05-14 23:45:54,977 - myapp - INFO - Query returned: ['Приют "Счастливый хвост"']
+2025-05-14 23:45:57,527 - myapp - INFO - Received parameters: table1=breeds, attr1=breed_name, value1=Бульмастиф, table2=locations, attr2=location_name
+2025-05-14 23:45:57,528 - myapp - INFO - Executing query: 
+                SELECT DISTINCT l.location_name
+                FROM locations l
+                JOIN dogs d ON d.location_id = l.id
+                JOIN breeds b ON d.breeds_id = b.id
+                WHERE b.breed_name = ?
+                ORDER BY l.location_name
+             with parameter: Бульмастиф
+2025-05-14 23:45:57,529 - myapp - INFO - Query returned: ['Приют "Счастливый хвост"']
+2025-05-14 23:50:39,429 - myapp - INFO - Logging setup completed. Application started.
+2025-05-14 23:53:44,324 - myapp - INFO - Logging setup completed. Application started.
+2025-05-14 23:57:25,450 - myapp - INFO - Logging setup completed. Application started.
+2025-05-14 23:57:59,435 - myapp - INFO - Logging setup completed. Application started.
+2025-05-15 00:01:20,558 - myapp - INFO - Logging setup completed. Application started.
+2025-05-15 00:02:24,741 - myapp - INFO - Logging setup completed. Application started.
+2025-05-15 00:07:03,763 - myapp - INFO - Logging setup completed. Application started.
+2025-05-15 00:07:12,661 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-15 00:07:24,466 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-15 00:09:38,698 - myapp - INFO - Added dog: Рокки
+2025-05-15 00:09:38,704 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-15 00:10:04,810 - myapp - INFO - Added dog: Ральф
+2025-05-15 00:10:04,817 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-15 00:10:22,052 - myapp - INFO - Added dog: Джесси
+2025-05-15 00:10:22,058 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-15 00:10:39,094 - myapp - INFO - Added dog: Скуф
+2025-05-15 00:10:39,101 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-15 00:10:51,821 - myapp - INFO - Added dog: Райан
+2025-05-15 00:10:51,828 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-15 00:11:13,154 - myapp - INFO - Added dog: Тайлер
+2025-05-15 00:11:13,160 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-15 00:11:54,565 - myapp - INFO - Added dog: Умка
+2025-05-15 00:11:54,571 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-15 00:13:05,247 - myapp - INFO - Added dog: Амир
+2025-05-15 00:13:05,255 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-15 00:13:30,188 - myapp - INFO - Added dog: Лада
+2025-05-15 00:13:30,197 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-15 00:13:44,076 - myapp - INFO - Added dog: Мия
+2025-05-15 00:13:44,083 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations
+2025-05-15 00:14:10,110 - myapp - INFO - Added dog: Леонард
+2025-05-15 00:14:10,116 - myapp - INFO - Statistics retrieved: 50 breeds, 20 locations

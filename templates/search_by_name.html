@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Поиск по имени собаки</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        nav { margin-bottom: 20px; }
+        nav a { margin-right: 10px; }
+        form { margin-bottom: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .no-results { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Поиск по имени собаки</h1>
+ <nav>
+        <a href="/">Главная</a> |
+        <a href="/add_detailed">Добавить</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="{{ url_for('search_name') }}">Поиск по имени</a>|
+<a href="{{ url_for('search_breed_location') }}">Поиск по породе и месту</a>
+    </nav>
+
+    <form method="POST" action="{{ url_for('search') }}">
+        <input type="hidden" name="search_type" value="name">
+        <label for="name">Имя собаки:</label>
+        <select name="name" id="name">
+            <option value="">-- Выберите имя --</option>
+            {% for dog_name in dog_names %}
+                <option value="{{ dog_name }}" {% if name == dog_name %}selected{% endif %}>{{ dog_name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Поиск</button>
+    </form>
+
+    {% if name_no_results %}
+        <p class="no-results">Ничего не найдено</p>
+    {% endif %}
+
+    {% if name_results %}
+        <h2>Результаты поиска</h2>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Имя</th>
+                <th>Порода</th>
+                <th>Место размещения</th>
+                <th>Дата рождения</th>
+                <th>Дата регистрации</th>
+                <th>Номер микрочипа</th>
+            </tr>
+            {% for dog in name_results %}
+                <tr>
+                    <td>{{ dog.id }}</td>
+                    <td>{{ dog.name }}</td>
+                    <td>{{ dog.breed_name }}</td>
+                    <td>{{ dog.location_name }}</td>
+                    <td>{{ dog.birth_date }}</td>
+                    <td>{{ dog.registration_date }}</td>
+                    <td>{{ dog.microchip_number }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+</body>
+</html>

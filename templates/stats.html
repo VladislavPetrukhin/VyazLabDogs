@@ -38,11 +38,12 @@
 </head>
 <body>
     <h1>Статистика</h1>
-    <nav>
-        <a href="{{ url_for('index') }}">Главная</a> |
-        <a href="{{ url_for('add_detailed') }}">Добавить подробно</a> |
-        <a href="{{ url_for('stats') }}">Статистика</a> |
-        <a href="{{ url_for('sync_queries') }}">Поиск по атрибутам</a>
+ <nav>
+        <a href="/">Главная</a> |
+        <a href="/add_detailed">Добавить</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="{{ url_for('search_name') }}">Поиск по имени</a>|
+<a href="{{ url_for('search_breed_location') }}">Поиск по породе и месту</a>
     </nav>
 
     <div id="successPopup" class="popup">

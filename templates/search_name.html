@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Поиск по имени собаки</h1>
+<select id="name_select">
+    <option value="">Выберите имя</option>
+    {% for name in dog_names %}
+    <option value="{{ name }}">{{ name }}</option>
+    {% endfor %}
+</select>
+<div id="result"></div>
+
+<script>
+function generateDogTable(dogs) {
+    if (dogs.length === 0) return '<p>Собака не найдена.</p>';
+    let table = '<table><thead><tr><th>ID</th><th>Имя</th><th>Порода</th><th>Место</th><th>Дата рождения</th><th>Дата регистрации</th><th>Микрочип</th></tr></thead><tbody>';
+    dogs.forEach(dog => {
+        table += `<tr><td>${dog.id}</td><td>${dog.name}</td><td>${dog.breed_name}</td><td>${dog.location_name}</td><td>${dog.birth_date || 'Не указано'}</td><td>${dog.registration_date || 'Не указано'}</td><td>${dog.microchip_number || 'Не указано'}</td></tr>`;
+    });
+    table += '</tbody></table>';
+    return table;
+}
+
+document.getElementById('name_select').addEventListener('change', function() {
+    const selectedName = this.value;
+    const resultDiv = document.getElementById('result');
+    if (selectedName) {
+        fetch(`/get_dog_by_name?name=${encodeURIComponent(selectedName)}`)
+            .then(response => response.json())
+            .then(data => {
+                resultDiv.innerHTML = generateDogTable(data);
+            })
+            .catch(error => console.error('Error:', error));
+    } else {
+        resultDiv.innerHTML = '';
+    }
+});
+</script>
+{% endblock %}

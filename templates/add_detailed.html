@@ -41,11 +41,12 @@
 </head>
 <body>
     <h1>Добавить собаку (подробный режим)</h1>
-    <nav>
-        <a href="{{ url_for('index') }}">Главная</a> |
-        <a href="{{ url_for('add') }}">Добавить</a> |
-        <a href="{{ url_for('stats') }}">Статистика</a> |
-        <a href="{{ url_for('sync_queries') }}">Поиск по атрибутам</a>
+  <nav>
+        <a href="/">Главная</a> |
+        <a href="/add_detailed">Добавить</a> |
+        <a href="/stats">Статистика</a> |
+        <a href="{{ url_for('search_name') }}">Поиск по имени</a>|
+<a href="{{ url_for('search_breed_location') }}">Поиск по породе и месту</a>
     </nav>
 
     {% if errors %}
